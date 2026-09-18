@@ -8,8 +8,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const db = createClient({
-  url: process.env.STORAGE__SE_URL || process.env.STORAGE_URL || 'file:./cybershield.db',
-  authToken: process.env.STORAGE__TOKEN || process.env.STORAGE_AUTH_TOKEN,
+  url: process.env.STORAGE__SE_URL 
+    || process.env.STORAGE_URL 
+    || process.env.TURSO_DATABASE_URL 
+    || 'file:./cybershield.db',
+  authToken: process.env.STORAGE__TOKEN 
+    || process.env.STORAGE_AUTH_TOKEN 
+    || process.env.TURSO_AUTH_TOKEN,
 });
 
 // ===== Хелперы для работы с БД =====
