@@ -1,121 +1,129 @@
 const express = require('express');
 const session = require('express-session');
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const path = require('path');
+const { createClient } = require('@libsql/client');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-const db = new sqlite3.Database('./cybershield.db');
-db.run('PRAGMA foreign_keys = ON');
-
-db.serialize(() => {
-  // Пользователи
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    email TEXT UNIQUE,
-    password_hash TEXT,
-    role TEXT DEFAULT 'user'
-  )`, (err) => {
-    if (err) console.error('Ошибка создания users:', err.message);
-  });
-  db.run("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'", (err) => {
-    if (err && !err.message.includes('duplicate column name')) {
-      console.error('Ошибка добавления role:', err.message);
-    }
-  });
-
-  // Программы
-  db.run(`CREATE TABLE IF NOT EXISTS software (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    icon TEXT,
-    pros TEXT,
-    cons TEXT
-  )`);
-
-  // Комментарии к программам
-  db.run(`CREATE TABLE IF NOT EXISTS comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    software_id INTEGER,
-    text TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id),
-    FOREIGN KEY(software_id) REFERENCES software(id)
-  )`);
-
-  // Темы форума
-  db.run(`CREATE TABLE IF NOT EXISTS topics (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    title TEXT,
-    content TEXT,
-    closed INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  )`);
-
-  // Сообщения форума
-  db.run(`CREATE TABLE IF NOT EXISTS posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    topic_id INTEGER,
-    user_id INTEGER,
-    content TEXT,
-    pinned INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(topic_id) REFERENCES topics(id),
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  )`);
-  db.run("ALTER TABLE posts ADD COLUMN pinned INTEGER DEFAULT 0", (err) => {
-    if (err && !err.message.includes('duplicate column name')) {
-      console.error('Ошибка добавления pinned:', err.message);
-    }
-  });
-
-  // Заявки на проверку программ
-  db.run(`CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    name TEXT,
-    description TEXT,
-    download_url TEXT,
-    status TEXT DEFAULT 'pending',
-    review TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  )`);
-
-  // История проверок из расширения
-  db.run(`CREATE TABLE IF NOT EXISTS check_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    url TEXT,
-    domain TEXT,
-    verdict TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  )`, (err) => {
-    if (err) console.error('Ошибка создания check_logs:', err.message);
-  });
-
-  // Начальные данные для программ
-  db.get('SELECT COUNT(*) as count FROM software', (err, row) => {
-    if (err) return console.error(err);
-    if (row.count === 0) {
-      const stmt = db.prepare(`INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)`);
-      stmt.run('Kaspersky', 'shield', 'Высокий уровень детекции, Многофункциональный, Защита платежей', 'Платная версия, Нагрузка на систему');
-      stmt.run('Bitdefender', 'bug', 'Легкий, Отличная защита в реальном времени, VPN в комплекте', 'Интерфейс перегружен, Сканы медленные');
-      stmt.run('Malwarebytes', 'skull', 'Специализация на вредоносном ПО, Быстрое сканирование, Бесплатная версия', 'Нет постоянной защиты в бесплатной, Обнаруживает не все угрозы');
-      stmt.finalize();
-    }
-  });
+// ===== Подключение к Turso (или локальному файлу для разработки) =====
+const db = createClient({
+  url: process.env.STORAGE_URL || 'file:./cybershield.db',
+  authToken: process.env.STORAGE_AUTH_TOKEN,
 });
 
+// ===== Хелперы для работы с БД =====
+async function dbGet(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return result.rows[0] || null;
+}
+
+async function dbAll(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return result.rows;
+}
+
+async function dbRun(sql, args = []) {
+  const result = await db.execute({ sql, args });
+  return {
+    lastID: result.lastInsertRowid ? Number(result.lastInsertRowid) : null,
+    changes: result.rowsAffected || 0
+  };
+}
+
+// ===== Инициализация таблиц =====
+async function initDB() {
+  try {
+    await db.execute(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE,
+      email TEXT UNIQUE,
+      password_hash TEXT,
+      role TEXT DEFAULT 'user'
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS software (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      icon TEXT,
+      pros TEXT,
+      cons TEXT
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      software_id INTEGER,
+      text TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS topics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      title TEXT,
+      content TEXT,
+      closed INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      topic_id INTEGER,
+      user_id INTEGER,
+      content TEXT,
+      pinned INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      name TEXT,
+      description TEXT,
+      download_url TEXT,
+      status TEXT DEFAULT 'pending',
+      review TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    await db.execute(`CREATE TABLE IF NOT EXISTS check_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      url TEXT,
+      domain TEXT,
+      verdict TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Начальные программы
+    const countRow = await dbGet('SELECT COUNT(*) as count FROM software');
+    if (Number(countRow.count) === 0) {
+      await dbRun(
+        'INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)',
+        ['Kaspersky', 'shield', 'Высокий уровень детекции, Многофункциональный, Защита платежей', 'Платная версия, Нагрузка на систему']
+      );
+      await dbRun(
+        'INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)',
+        ['Bitdefender', 'bug', 'Легкий, Отличная защита в реальном времени, VPN в комплекте', 'Интерфейс перегружен, Сканы медленные']
+      );
+      await dbRun(
+        'INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)',
+        ['Malwarebytes', 'skull', 'Специализация на вредоносном ПО, Быстрое сканирование, Бесплатная версия', 'Нет постоянной защиты в бесплатной, Обнаруживает не все угрозы']
+      );
+      console.log('✅ Начальные программы добавлены');
+    }
+    console.log('✅ База данных инициализирована');
+  } catch (e) {
+    console.error('❌ Ошибка инициализации БД:', e);
+  }
+}
+
+// ===== Middleware =====
 app.use(express.json());
 app.use(express.static('public'));
+app.set('trust proxy', 1);
 app.use(session({
   secret: 'secret-key-cybershield',
   resave: false,
@@ -132,39 +140,35 @@ app.post('/api/register', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     const userRole = (role === 'moderator') ? 'moderator' : 'user';
-    db.run(
-      'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [username, email, hash, userRole],
-      function(err) {
-        if (err) {
-          console.error('Ошибка регистрации:', err.message);
-          if (err.message.includes('UNIQUE')) {
-            return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
-          }
-          return res.status(500).json({ error: 'Ошибка сервера при регистрации' });
-        }
-        req.session.userId = this.lastID;
-        req.session.username = username;
-        req.session.role = userRole;
-        res.json({ success: true, username, role: userRole });
+    try {
+      const result = await dbRun(
+        'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
+        [username, email, hash, userRole]
+      );
+      req.session.userId = result.lastID;
+      req.session.username = username;
+      req.session.role = userRole;
+      res.json({ success: true, username, role: userRole });
+    } catch (err) {
+      console.error('Ошибка регистрации:', err.message);
+      if (err.message.includes('UNIQUE')) {
+        return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
       }
-    );
+      return res.status(500).json({ error: 'Ошибка сервера при регистрации' });
+    }
   } catch (err) {
     console.error('Ошибка хеширования:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Введите email и пароль' });
   }
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-    if (err) {
-      console.error('Ошибка входа:', err.message);
-      return res.status(500).json({ error: 'Ошибка сервера' });
-    }
+  try {
+    const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) return res.status(401).json({ error: 'Неверный email или пароль' });
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Неверный email или пароль' });
@@ -172,7 +176,10 @@ app.post('/api/login', (req, res) => {
     req.session.username = user.username;
     req.session.role = user.role;
     res.json({ success: true, username: user.username, role: user.role });
-  });
+  } catch (err) {
+    console.error('Ошибка входа:', err.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 app.post('/api/logout', (req, res) => {
@@ -180,68 +187,62 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   if (req.session.userId) {
-    db.get('SELECT username, role FROM users WHERE id = ?', [req.session.userId], (err, row) => {
-      if (err) {
-        console.error('Ошибка получения пользователя:', err.message);
-        return res.status(500).json({ error: 'Ошибка сервера' });
-      }
+    try {
+      const row = await dbGet('SELECT username, role FROM users WHERE id = ?', [req.session.userId]);
       if (!row) {
         req.session.destroy();
         return res.json({ authenticated: false });
       }
       res.json({ authenticated: true, username: row.username, userId: req.session.userId, role: row.role });
-    });
+    } catch (err) {
+      console.error('Ошибка получения пользователя:', err.message);
+      res.status(500).json({ error: 'Ошибка сервера' });
+    }
   } else {
     res.json({ authenticated: false });
   }
 });
 
 // ===== ПРОГРАММЫ И КОММЕНТАРИИ =====
-app.get('/api/software', (req, res) => {
-  db.all('SELECT * FROM software', (err, software) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    let completed = 0;
+app.get('/api/software', async (req, res) => {
+  try {
+    const software = await dbAll('SELECT * FROM software');
     const result = [];
-
-    software.forEach((prog, index) => {
-      db.all(
+    for (const prog of software) {
+      const comments = await dbAll(
         `SELECT comments.*, users.username 
          FROM comments 
          JOIN users ON comments.user_id = users.id 
          WHERE comments.software_id = ? 
          ORDER BY comments.created_at DESC`,
-        [prog.id],
-        (err, comments) => {
-          if (err) comments = [];
-          const progObj = {
-            id: prog.id,
-            name: prog.name,
-            icon: prog.icon,
-            pros: prog.pros ? prog.pros.split(', ') : [],
-            cons: prog.cons ? prog.cons.split(', ') : [],
-            comments: comments.map(c => ({
-              id: c.id,
-              userId: c.user_id,
-              username: c.username,
-              text: c.text,
-              created_at: c.created_at
-            }))
-          };
-          result[index] = progObj;
-          completed++;
-          if (completed === software.length) {
-            result.sort((a, b) => a.id - b.id);
-            res.json(result);
-          }
-        }
+        [prog.id]
       );
-    });
-  });
+      result.push({
+        id: prog.id,
+        name: prog.name,
+        icon: prog.icon,
+        pros: prog.pros ? prog.pros.split(', ') : [],
+        cons: prog.cons ? prog.cons.split(', ') : [],
+        comments: comments.map(c => ({
+          id: c.id,
+          userId: c.user_id,
+          username: c.username,
+          text: c.text,
+          created_at: c.created_at
+        }))
+      });
+    }
+    result.sort((a, b) => a.id - b.id);
+    res.json(result);
+  } catch (err) {
+    console.error('Ошибка загрузки программ:', err.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.post('/api/comments', (req, res) => {
+app.post('/api/comments', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
@@ -249,49 +250,52 @@ app.post('/api/comments', (req, res) => {
   if (!softwareId || !text) {
     return res.status(400).json({ error: 'Не все поля заполнены' });
   }
-  db.run(
-    'INSERT INTO comments (user_id, software_id, text) VALUES (?, ?, ?)',
-    [req.session.userId, softwareId, text],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ success: true, commentId: this.lastID });
-    }
-  );
+  try {
+    const result = await dbRun(
+      'INSERT INTO comments (user_id, software_id, text) VALUES (?, ?, ?)',
+      [req.session.userId, softwareId, text]
+    );
+    res.json({ success: true, commentId: result.lastID });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.delete('/api/comments/:id', (req, res) => {
+app.delete('/api/comments/:id', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
   const commentId = req.params.id;
-  db.get('SELECT user_id FROM comments WHERE id = ?', [commentId], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  try {
+    const row = await dbGet('SELECT user_id FROM comments WHERE id = ?', [commentId]);
     if (!row) return res.status(404).json({ error: 'Комментарий не найден' });
     if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
       return res.status(403).json({ error: 'Недостаточно прав' });
     }
-    db.run('DELETE FROM comments WHERE id = ?', [commentId], function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ success: true });
-    });
-  });
+    await dbRun('DELETE FROM comments WHERE id = ?', [commentId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 // ===== ФОРУМ =====
-app.get('/api/topics', (req, res) => {
-  db.all(`
-    SELECT topics.*, users.username,
-      (SELECT COUNT(*) FROM posts WHERE posts.topic_id = topics.id) as post_count
-    FROM topics
-    JOIN users ON topics.user_id = users.id
-    ORDER BY topics.created_at DESC
-  `, (err, topics) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+app.get('/api/topics', async (req, res) => {
+  try {
+    const topics = await dbAll(`
+      SELECT topics.*, users.username,
+        (SELECT COUNT(*) FROM posts WHERE posts.topic_id = topics.id) as post_count
+      FROM topics
+      JOIN users ON topics.user_id = users.id
+      ORDER BY topics.created_at DESC
+    `);
     res.json(topics);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.post('/api/topics', (req, res) => {
+app.post('/api/topics', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
@@ -299,35 +303,35 @@ app.post('/api/topics', (req, res) => {
   if (!title || !content) {
     return res.status(400).json({ error: 'Заполните заголовок и содержание' });
   }
-  db.run(
-    'INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)',
-    [req.session.userId, title, content],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ success: true, topicId: this.lastID });
-    }
-  );
+  try {
+    const result = await dbRun(
+      'INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)',
+      [req.session.userId, title, content]
+    );
+    res.json({ success: true, topicId: result.lastID });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.get('/api/topics/:id', (req, res) => {
-  const topicId = req.params.id;
-  db.get('SELECT * FROM topics WHERE id = ?', [topicId], (err, topic) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+app.get('/api/topics/:id', async (req, res) => {
+  try {
+    const topic = await dbGet('SELECT * FROM topics WHERE id = ?', [req.params.id]);
     if (!topic) return res.status(404).json({ error: 'Тема не найдена' });
-    db.all(`
+    const posts = await dbAll(`
       SELECT posts.*, users.username
       FROM posts
       JOIN users ON posts.user_id = users.id
       WHERE posts.topic_id = ?
       ORDER BY posts.pinned DESC, posts.created_at ASC
-    `, [topicId], (err, posts) => {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ topic, posts });
-    });
-  });
+    `, [req.params.id]);
+    res.json({ topic, posts });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.post('/api/posts', (req, res) => {
+app.post('/api/posts', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
@@ -335,84 +339,83 @@ app.post('/api/posts', (req, res) => {
   if (!topicId || !content) {
     return res.status(400).json({ error: 'Не все поля заполнены' });
   }
-  db.get('SELECT closed FROM topics WHERE id = ?', [topicId], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    if (!row) return res.status(404).json({ error: 'Тема не найдена' });
-    if (row.closed === 1 && req.session.role !== 'moderator') {
+  try {
+    const topic = await dbGet('SELECT closed FROM topics WHERE id = ?', [topicId]);
+    if (!topic) return res.status(404).json({ error: 'Тема не найдена' });
+    if (topic.closed === 1 && req.session.role !== 'moderator') {
       return res.status(403).json({ error: 'Тема закрыта для ответов' });
     }
-    db.run(
+    const result = await dbRun(
       'INSERT INTO posts (topic_id, user_id, content) VALUES (?, ?, ?)',
-      [topicId, req.session.userId, content],
-      function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-        res.json({ success: true, postId: this.lastID });
-      }
+      [topicId, req.session.userId, content]
     );
-  });
+    res.json({ success: true, postId: result.lastID });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.delete('/api/posts/:id', (req, res) => {
+app.delete('/api/posts/:id', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
-  const postId = req.params.id;
-  db.get('SELECT user_id FROM posts WHERE id = ?', [postId], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  try {
+    const row = await dbGet('SELECT user_id FROM posts WHERE id = ?', [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
     if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
       return res.status(403).json({ error: 'Недостаточно прав' });
     }
-    db.run('DELETE FROM posts WHERE id = ?', [postId], function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ success: true });
-    });
-  });
+    await dbRun('DELETE FROM posts WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.patch('/api/posts/:id/pin', (req, res) => {
+app.patch('/api/posts/:id/pin', async (req, res) => {
   if (!req.session.userId || req.session.role !== 'moderator') {
     return res.status(403).json({ error: 'Доступ только для модераторов' });
   }
-  const postId = req.params.id;
   const { pinned } = req.body;
-  db.run('UPDATE posts SET pinned = ? WHERE id = ?', [pinned, postId], function(err) {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    if (this.changes === 0) return res.status(404).json({ error: 'Сообщение не найдено' });
+  try {
+    const result = await dbRun('UPDATE posts SET pinned = ? WHERE id = ?', [pinned, req.params.id]);
+    if (result.changes === 0) return res.status(404).json({ error: 'Сообщение не найдено' });
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.patch('/api/topics/:id/close', (req, res) => {
+app.patch('/api/topics/:id/close', async (req, res) => {
   if (!req.session.userId || req.session.role !== 'moderator') {
     return res.status(403).json({ error: 'Доступ только для модераторов' });
   }
-  const topicId = req.params.id;
   const { closed } = req.body;
-  db.run('UPDATE topics SET closed = ? WHERE id = ?', [closed, topicId], function(err) {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    if (this.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
+  try {
+    const result = await dbRun('UPDATE topics SET closed = ? WHERE id = ?', [closed, req.params.id]);
+    if (result.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.delete('/api/topics/:id', (req, res) => {
+app.delete('/api/topics/:id', async (req, res) => {
   if (!req.session.userId || req.session.role !== 'moderator') {
     return res.status(403).json({ error: 'Доступ только для модераторов' });
   }
-  const topicId = req.params.id;
-  db.run('DELETE FROM posts WHERE topic_id = ?', [topicId], (err) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    db.run('DELETE FROM topics WHERE id = ?', [topicId], function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      if (this.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
-      res.json({ success: true });
-    });
-  });
+  try {
+    await dbRun('DELETE FROM posts WHERE topic_id = ?', [req.params.id]);
+    const result = await dbRun('DELETE FROM topics WHERE id = ?', [req.params.id]);
+    if (result.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// ===== ЗАЯВКИ НА ПРОВЕРКУ ПРОГРАММ =====
-app.post('/api/submissions', (req, res) => {
+// ===== ЗАЯВКИ НА ПРОВЕРКУ =====
+app.post('/api/submissions', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
@@ -420,113 +423,117 @@ app.post('/api/submissions', (req, res) => {
   if (!name || !description || !download_url) {
     return res.status(400).json({ error: 'Все поля обязательны' });
   }
-  db.run(
-    'INSERT INTO submissions (user_id, name, description, download_url) VALUES (?, ?, ?, ?)',
-    [req.session.userId, name, description, download_url],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json({ success: true, submissionId: this.lastID });
-    }
-  );
+  try {
+    const result = await dbRun(
+      'INSERT INTO submissions (user_id, name, description, download_url) VALUES (?, ?, ?, ?)',
+      [req.session.userId, name, description, download_url]
+    );
+    res.json({ success: true, submissionId: result.lastID });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.get('/api/submissions', (req, res) => {
+app.get('/api/submissions', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
   const isModerator = req.session.role === 'moderator';
-  let query = `
-    SELECT submissions.*, users.username 
-    FROM submissions 
-    JOIN users ON submissions.user_id = users.id
-  `;
-  if (!isModerator) {
-    query += ' WHERE submissions.user_id = ?';
-  }
-  query += ' ORDER BY submissions.created_at DESC';
-  const params = isModerator ? [] : [req.session.userId];
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  try {
+    let rows;
+    if (isModerator) {
+      rows = await dbAll(`
+        SELECT submissions.*, users.username 
+        FROM submissions 
+        JOIN users ON submissions.user_id = users.id
+        ORDER BY submissions.created_at DESC
+      `);
+    } else {
+      rows = await dbAll(`
+        SELECT submissions.*, users.username 
+        FROM submissions 
+        JOIN users ON submissions.user_id = users.id
+        WHERE submissions.user_id = ?
+        ORDER BY submissions.created_at DESC
+      `, [req.session.userId]);
+    }
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.get('/api/submissions/:id', (req, res) => {
+app.get('/api/submissions/:id', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
-  const id = req.params.id;
-  db.get(`
-    SELECT submissions.*, users.username 
-    FROM submissions 
-    JOIN users ON submissions.user_id = users.id 
-    WHERE submissions.id = ?
-  `, [id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  try {
+    const row = await dbGet(`
+      SELECT submissions.*, users.username 
+      FROM submissions 
+      JOIN users ON submissions.user_id = users.id 
+      WHERE submissions.id = ?
+    `, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Заявка не найдена' });
     if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
       return res.status(403).json({ error: 'Доступ запрещён' });
     }
     res.json(row);
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.patch('/api/submissions/:id', (req, res) => {
+app.patch('/api/submissions/:id', async (req, res) => {
   if (!req.session.userId || req.session.role !== 'moderator') {
     return res.status(403).json({ error: 'Только модератор может изменять статус' });
   }
-  const id = req.params.id;
   const { status, review } = req.body;
   if (!status || !['pending', 'approved', 'rejected', 'reviewed'].includes(status)) {
     return res.status(400).json({ error: 'Некорректный статус' });
   }
-  db.run(
-    'UPDATE submissions SET status = ?, review = ? WHERE id = ?',
-    [status, review || null, id],
-    function(err) {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      if (this.changes === 0) return res.status(404).json({ error: 'Заявка не найдена' });
-      res.json({ success: true });
-    }
-  );
+  try {
+    const result = await dbRun(
+      'UPDATE submissions SET status = ?, review = ? WHERE id = ?',
+      [status, review || null, req.params.id]
+    );
+    if (result.changes === 0) return res.status(404).json({ error: 'Заявка не найдена' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.post('/api/submissions/:id/approve', (req, res) => {
+app.post('/api/submissions/:id/approve', async (req, res) => {
   if (!req.session.userId || req.session.role !== 'moderator') {
     return res.status(403).json({ error: 'Только модератор может одобрить' });
   }
-  const id = req.params.id;
   const { pros, cons, review } = req.body;
   if (!pros || !cons) {
     return res.status(400).json({ error: 'Укажите плюсы и минусы' });
   }
-  db.get('SELECT name FROM submissions WHERE id = ?', [id], (err, submission) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  try {
+    const submission = await dbGet('SELECT name FROM submissions WHERE id = ?', [req.params.id]);
     if (!submission) return res.status(404).json({ error: 'Заявка не найдена' });
-    db.run(
+    const insertResult = await dbRun(
       'INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)',
-      [submission.name, 'shield', pros, cons],
-      function(err) {
-        if (err) return res.status(500).json({ error: 'Ошибка при добавлении программы' });
-        db.run(
-          'UPDATE submissions SET status = ?, review = ? WHERE id = ?',
-          ['approved', review || null, id],
-          function(err) {
-            if (err) return res.status(500).json({ error: 'Ошибка обновления заявки' });
-            res.json({ success: true, softwareId: this.lastID });
-          }
-        );
-      }
+      [submission.name, 'shield', pros, cons]
     );
-  });
+    await dbRun(
+      'UPDATE submissions SET status = ?, review = ? WHERE id = ?',
+      ['approved', review || null, req.params.id]
+    );
+    res.json({ success: true, softwareId: insertResult.lastID });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-// ===== WHOIS/RDAP — получение даты регистрации домена =====
+// ===== WHOIS / RDAP =====
 app.get('/api/whois/:domain', async (req, res) => {
   const domain = req.params.domain;
   if (!domain) return res.status(400).json({ error: 'Домен не указан' });
 
-  // Локальные адреса не проверяем
   const cleanDomain = domain.toLowerCase();
   if (cleanDomain === 'localhost' || cleanDomain === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(cleanDomain)) {
     return res.status(404).json({ error: 'Локальный адрес — WHOIS не применим' });
@@ -538,19 +545,15 @@ app.get('/api/whois/:domain', async (req, res) => {
       headers: { 'Accept': 'application/json' },
       redirect: 'follow'
     });
-
     if (!response.ok) {
       return res.status(404).json({ error: 'RDAP не вернул данные', status: response.status });
     }
-
     const data = await response.json();
     const events = data.events || [];
     const registration = events.find(e => e.eventAction === 'registration');
-
     if (!registration || !registration.eventDate) {
       return res.status(404).json({ error: 'Дата регистрации не найдена' });
     }
-
     res.json({
       success: true,
       domain,
@@ -563,14 +566,13 @@ app.get('/api/whois/:domain', async (req, res) => {
   }
 });
 
-// ===== ПРОВЕРКА САЙТОВ (для расширения) =====
+// ===== ПРОВЕРКА САЙТОВ =====
 app.post('/api/check', (req, res) => {
   const { url, domain } = req.body;
   if (!url || !domain) return res.status(400).json({ error: 'Не указан URL' });
 
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
 
-  // ===== 0. ЛОКАЛЬНЫЕ АДРЕСА — сразу в белый список =====
   const LOCAL_SITES = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
   const isLocal =
     LOCAL_SITES.includes(cleanDomain) ||
@@ -582,13 +584,9 @@ app.post('/api/check', (req, res) => {
     cleanDomain.endsWith('.localhost');
 
   if (isLocal) {
-    return res.json({
-      verdict: 'safe',
-      reasons: ['Локальный адрес — свой проект']
-    });
+    return res.json({ verdict: 'safe', reasons: ['Локальный адрес — свой проект'] });
   }
 
-  // ===== 1. ГОССАЙТЫ =====
   const GOVERNMENT_SITES = [
     'fsb.ru', 'mvd.ru', 'mil.ru', 'rosguard.gov.ru',
     'kremlin.ru', 'government.ru', 'gov.ru',
@@ -606,22 +604,15 @@ app.post('/api/check', (req, res) => {
   });
 
   if (isGov) {
-    return res.json({
-      verdict: 'government',
-      reasons: ['Официальный сайт государственного органа РФ']
-    });
+    return res.json({ verdict: 'government', reasons: ['Официальный сайт государственного органа РФ'] });
   }
 
-  // ===== 2. ОБЫЧНАЯ ПРОВЕРКА =====
   let verdict = 'safe';
   const reasons = [];
 
   const BLACKLIST = [
-    'phishing-example.com',
-    'malware-site.ru',
-    'free-vbucks.net',
-    'steam-communlty.com',
-    'sberbank-online-vhod.ru'
+    'phishing-example.com', 'malware-site.ru', 'free-vbucks.net',
+    'steam-communlty.com', 'sberbank-online-vhod.ru'
   ];
   const SUSPICIOUS_PATTERNS = [
     'free-money', 'login-verify', 'account-confirm',
@@ -646,8 +637,8 @@ app.post('/api/check', (req, res) => {
   res.json({ verdict, reasons });
 });
 
-// ===== СИНХРОНИЗАЦИЯ ИСТОРИИ ИЗ РАСШИРЕНИЯ =====
-app.post('/api/check/sync', (req, res) => {
+// ===== СИНХРОНИЗАЦИЯ ИСТОРИИ =====
+app.post('/api/check/sync', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
@@ -655,46 +646,57 @@ app.post('/api/check/sync', (req, res) => {
   if (!Array.isArray(history)) {
     return res.status(400).json({ error: 'Некорректные данные' });
   }
-
-  const stmt = db.prepare('INSERT INTO check_logs (user_id, url, domain, verdict) VALUES (?, ?, ?, ?)');
-  const limited = history.slice(0, 50);
-  limited.forEach(item => {
-    stmt.run(req.session.userId, item.url || '', item.domain || '', item.verdict || 'unknown');
-  });
-  stmt.finalize();
-
-  res.json({ success: true, synced: limited.length });
-});
-
-// ===== ИСТОРИЯ ПРОВЕРОК ПОЛЬЗОВАТЕЛЯ =====
-app.get('/api/check/history', (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Требуется авторизация' });
-  }
-  db.all(
-    'SELECT * FROM check_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
-    [req.session.userId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-      res.json(rows);
+  try {
+    const limited = history.slice(0, 50);
+    for (const item of limited) {
+      await dbRun(
+        'INSERT INTO check_logs (user_id, url, domain, verdict) VALUES (?, ?, ?, ?)',
+        [req.session.userId, item.url || '', item.domain || '', item.verdict || 'unknown']
+      );
     }
-  );
+    res.json({ success: true, synced: limited.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.delete('/api/check/history', (req, res) => {
+app.get('/api/check/history', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
-  db.run('DELETE FROM check_logs WHERE user_id = ?', [req.session.userId], function(err) {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    res.json({ success: true, deleted: this.changes });
-  });
+  try {
+    const rows = await dbAll(
+      'SELECT * FROM check_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
+      [req.session.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
+app.delete('/api/check/history', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Требуется авторизация' });
+  }
+  try {
+    const result = await dbRun('DELETE FROM check_logs WHERE user_id = ?', [req.session.userId]);
+    res.json({ success: true, deleted: result.changes });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ===== SPA fallback =====
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Сервер запущен на http://localhost:${PORT}`);
+// ===== Запуск =====
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Сервер запущен на http://localhost:${PORT}`);
+  });
 });
+
+module.exports = app;
