@@ -7,10 +7,9 @@ const { createClient } = require('@libsql/client');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===== Подключение к Turso (или локальному файлу для разработки) =====
 const db = createClient({
-  url: process.env.STORAGE_URL || 'file:./cybershield.db',
-  authToken: process.env.STORAGE_AUTH_TOKEN,
+  url: process.env.STORAGE__SE_URL || process.env.STORAGE_URL || 'file:./cybershield.db',
+  authToken: process.env.STORAGE__TOKEN || process.env.STORAGE_AUTH_TOKEN,
 });
 
 // ===== Хелперы для работы с БД =====
