@@ -7,15 +7,92 @@ const { createClient } = require('@libsql/client');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const db = createClient({
-  url: process.env.STORAGE__SE_URL 
-    || process.env.STORAGE_URL 
-    || process.env.TURSO_DATABASE_URL 
-    || 'file:./cybershield.db',
-  authToken: process.env.STORAGE__TOKEN 
-    || process.env.STORAGE_AUTH_TOKEN 
-    || process.env.TURSO_AUTH_TOKEN,
-});
+// ===== Умный поиск переменных окружения =====
+// Turso/Vercel могут называть переменные по-разному, поэтому ищем гибко
+function findDatabaseUrl() {
+  const explicitKeys = [
+    'STORAGE_URL',
+    'STORAGE__SE_URL',
+    'STORAGE_SE_URL',
+    'TURSO_DATABASE_URL',
+    'TURSO_URL',
+    'LIBSQL_URL',
+    'DATABASE_URL'
+  ];
+  for (const key of explicitKeys) {
+    if (process.env[key] && process.env[key].trim()) {
+      return process.env[key].trim();
+    }
+  }
+  // Универсальный поиск: любая переменная, содержащая STORAGE/TURSO/LIBSQL + URL
+  for (const key of Object.keys(process.env)) {
+    const k = key.toUpperCase();
+    if ((k.includes('STORAGE') || k.includes('TURSO') || k.includes('LIBSQL')) && k.includes('URL')) {
+      const v = process.env[key];
+      if (v && v.trim()) return v.trim();
+    }
+  }
+  return null;
+}
+
+function findDatabaseToken() {
+  const explicitKeys = [
+    'STORAGE_AUTH_TOKEN',
+    'STORAGE__TOKEN',
+    'STORAGE_TOKEN',
+    'TURSO_AUTH_TOKEN',
+    'TURSO_TOKEN'
+  ];
+  for (const key of explicitKeys) {
+    if (process.env[key] && process.env[key].trim()) {
+      return process.env[key].trim();
+    }
+  }
+  for (const key of Object.keys(process.env)) {
+    const k = key.toUpperCase();
+    if ((k.includes('STORAGE') || k.includes('TURSO') || k.includes('LIBSQL')) && (k.includes('TOKEN') || k.includes('AUTH'))) {
+      const v = process.env[key];
+      if (v && v.trim()) return v.trim();
+    }
+  }
+  return null;
+}
+
+// ===== Отладочный вывод =====
+console.log('=============================================');
+console.log('🔍 КиберЩит: проверка окружения');
+console.log('=============================================');
+const dbUrl = findDatabaseUrl();
+const dbToken = findDatabaseToken();
+console.log('DB URL найден:', dbUrl ? `✅ (${dbUrl.slice(0, 40)}...)` : '❌');
+console.log('DB Token найден:', dbToken ? '✅' : '❌');
+if (!dbUrl) {
+  console.log('⚠️ Список всех переменных окружения с STORAGE/TURSO/DB:');
+  Object.keys(process.env)
+    .filter(k => /STORAGE|TURSO|LIBSQL|DATABASE|^DB/i.test(k))
+    .forEach(k => console.log('  -', k));
+}
+console.log('VERCEL:', process.env.VERCEL || 'нет');
+console.log('=============================================');
+
+// ===== Подключение к базе =====
+let db;
+if (dbUrl && dbUrl.startsWith('file:')) {
+  db = createClient({ url: dbUrl });
+  console.log('📂 Подключение к локальному файлу:', dbUrl);
+} else if (dbUrl) {
+  db = createClient({ url: dbUrl, authToken: dbToken });
+  console.log('☁️ Подключение к Turso');
+} else if (process.env.VERCEL) {
+  // На Vercel без переменных — подключаемся к пустой in-memory БД,
+  // чтобы сервер запустился (но данные не сохранятся)
+  console.error('❌ На Vercel нет переменных для БД! Подключи Turso Integration.');
+  db = createClient({ url: 'file::memory:' });
+} else {
+  // Локально — используем файл
+  db = createClient({ url: 'file:./cybershield.db' });
+  console.log('📂 Локальный режим: cybershield.db');
+}
 
 // ===== Хелперы для работы с БД =====
 async function dbGet(sql, args = []) {
