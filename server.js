@@ -133,6 +133,13 @@ async function initDB() {
     )`);
 
     // ===== Таблица для сессий =====
+await db.execute(`CREATE TABLE IF NOT EXISTS sessions (
+  sid TEXT PRIMARY KEY,
+  sess TEXT NOT NULL,
+  expire INTEGER NOT NULL
+)`);
+
+    // ===== Таблица для сессий =====
     await db.execute(`CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
       sess TEXT NOT NULL,
@@ -227,6 +234,36 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24
   }
 }));
+
+// ===== Гарантия инициализации БД перед каждым запросом =====
+let dbReady = false;
+let dbInitPromise = null;
+
+async function ensureDB() {
+  if (dbReady) return;
+  if (dbInitPromise) return dbInitPromise;
+  dbInitPromise = initDB()
+    .then(() => {
+      dbReady = true;
+      console.log('✅ ensureDB: база готова');
+    })
+    .catch(err => {
+      dbInitPromise = null;
+      console.error('❌ ensureDB: ошибка инициализации', err);
+      throw err;
+    });
+  return dbInitPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDB();
+    next();
+  } catch (err) {
+    console.error('DB init middleware error:', err);
+    res.status(500).json({ error: 'Ошибка инициализации базы данных' });
+  }
+});
 
 // ===== АВТОРИЗАЦИЯ =====
 app.post('/api/register', async (req, res) => {
@@ -694,11 +731,8 @@ app.delete('/api/check/history', async (req, res) => {
 
 
 
-// ===== Запуск =====
-initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
-  });
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
 
 module.exports = app;
