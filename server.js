@@ -692,10 +692,7 @@ app.delete('/api/check/history', async (req, res) => {
   }
 });
 
-// ===== SPA fallback =====
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+
 
 // ===== Запуск =====
 initDB().then(() => {

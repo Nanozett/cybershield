@@ -1,10 +1,13 @@
 {
   "version": 2,
   "builds": [
-    { "src": "server.js", "use": "@vercel/node" }
+    { "src": "server.js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "server.js" },
+    { "src": "/kibershit_extension.zip", "dest": "/public/kibershit_extension.zip" },
+    { "src": "/(.*\\.(zip|png|jpg|jpeg|css|js|html|ico|svg))", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "server.js" }
   ]
 }
