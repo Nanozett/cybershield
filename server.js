@@ -132,14 +132,6 @@ async function initDB() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // ===== Таблица для сессий =====
-await db.execute(`CREATE TABLE IF NOT EXISTS sessions (
-  sid TEXT PRIMARY KEY,
-  sess TEXT NOT NULL,
-  expire INTEGER NOT NULL
-)`);
-
-    // ===== Таблица для сессий =====
     await db.execute(`CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
       sess TEXT NOT NULL,
@@ -158,7 +150,22 @@ await db.execute(`CREATE TABLE IF NOT EXISTS sessions (
     console.log('✅ База данных инициализирована');
   } catch (e) {
     console.error('❌ Ошибка инициализации БД:', e);
+    throw e;
   }
+}
+
+// ===== Гарантия инициализации БД =====
+// Возвращает промис, который резолвится, когда все таблицы точно созданы.
+let dbInitPromise = null;
+function ensureDBReady() {
+  if (!dbInitPromise) {
+    dbInitPromise = initDB().catch(err => {
+      // Сбрасываем промис, чтобы следующий запрос попробовал снова
+      dbInitPromise = null;
+      throw err;
+    });
+  }
+  return dbInitPromise;
 }
 
 // ===== Кастомный Store для express-session на Turso =====
@@ -168,7 +175,8 @@ class TursoStore extends session.Store {
   }
 
   get(sid, callback) {
-    dbGet('SELECT sess, expire FROM sessions WHERE sid = ?', [sid])
+    ensureDBReady()
+      .then(() => dbGet('SELECT sess, expire FROM sessions WHERE sid = ?', [sid]))
       .then(row => {
         if (!row) return callback(null, null);
         if (row.expire && Date.now() > row.expire) {
@@ -186,33 +194,36 @@ class TursoStore extends session.Store {
   }
 
   set(sid, sess, callback) {
-    try {
-      const expire = sess.cookie && sess.cookie.expires
-        ? new Date(sess.cookie.expires).getTime()
-        : Date.now() + 24 * 60 * 60 * 1000;
-      const sessJson = JSON.stringify(sess);
-      dbRun(
-        'INSERT INTO sessions (sid, sess, expire) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expire = excluded.expire',
-        [sid, sessJson, expire]
-      )
-        .then(() => callback(null))
-        .catch(err => callback(err));
-    } catch (e) {
-      callback(e);
-    }
+    ensureDBReady()
+      .then(() => {
+        const expire = sess.cookie && sess.cookie.expires
+          ? new Date(sess.cookie.expires).getTime()
+          : Date.now() + 24 * 60 * 60 * 1000;
+        const sessJson = JSON.stringify(sess);
+        return dbRun(
+          'INSERT INTO sessions (sid, sess, expire) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expire = excluded.expire',
+          [sid, sessJson, expire]
+        );
+      })
+      .then(() => callback(null))
+      .catch(err => callback(err));
   }
 
   destroy(sid, callback) {
-    dbRun('DELETE FROM sessions WHERE sid = ?', [sid])
+    ensureDBReady()
+      .then(() => dbRun('DELETE FROM sessions WHERE sid = ?', [sid]))
       .then(() => callback(null))
       .catch(err => callback(err));
   }
 
   touch(sid, sess, callback) {
-    const expire = sess.cookie && sess.cookie.expires
-      ? new Date(sess.cookie.expires).getTime()
-      : Date.now() + 24 * 60 * 60 * 1000;
-    dbRun('UPDATE sessions SET expire = ? WHERE sid = ?', [expire, sid])
+    ensureDBReady()
+      .then(() => {
+        const expire = sess.cookie && sess.cookie.expires
+          ? new Date(sess.cookie.expires).getTime()
+          : Date.now() + 24 * 60 * 60 * 1000;
+        return dbRun('UPDATE sessions SET expire = ? WHERE sid = ?', [expire, sid]);
+      })
       .then(() => callback(null))
       .catch(err => callback(err));
   }
@@ -234,36 +245,6 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24
   }
 }));
-
-// ===== Гарантия инициализации БД перед каждым запросом =====
-let dbReady = false;
-let dbInitPromise = null;
-
-async function ensureDB() {
-  if (dbReady) return;
-  if (dbInitPromise) return dbInitPromise;
-  dbInitPromise = initDB()
-    .then(() => {
-      dbReady = true;
-      console.log('✅ ensureDB: база готова');
-    })
-    .catch(err => {
-      dbInitPromise = null;
-      console.error('❌ ensureDB: ошибка инициализации', err);
-      throw err;
-    });
-  return dbInitPromise;
-}
-
-app.use(async (req, res, next) => {
-  try {
-    await ensureDB();
-    next();
-  } catch (err) {
-    console.error('DB init middleware error:', err);
-    res.status(500).json({ error: 'Ошибка инициализации базы данных' });
-  }
-});
 
 // ===== АВТОРИЗАЦИЯ =====
 app.post('/api/register', async (req, res) => {
@@ -729,7 +710,12 @@ app.delete('/api/check/history', async (req, res) => {
   }
 });
 
-
+// ===== Запуск =====
+// Запускаем инициализацию БД сразу, чтобы к первому запросу таблицы уже были готовы.
+// Если что-то пойдёт не так — TursoStore повторит попытку в рамках ensureDBReady().
+ensureDBReady()
+  .then(() => console.log('✅ Стартовая инициализация БД завершена'))
+  .catch(err => console.error('⚠️ Стартовая инициализация БД не удалась, повторим при запросе:', err.message));
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
