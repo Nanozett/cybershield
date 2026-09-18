@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "КиберЩит — защита в реальном времени",
+  "version": "3.2.0",
+  "description": "Проверка сайтов на фишинг, генератор паролей, защита данных. Синхронизация с платформой КиберЩит.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "notifications",
+    "alarms",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://rdap.org/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

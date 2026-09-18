@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <div>
+        <div class="brand">КиберЩит</div>
+        <div class="version">v3.2.0</div>
+      </div>
+    </div>
+
+    <!-- Статус страницы -->
+    <div class="status-card" id="statusCard">
+      <div class="status-icon" id="statusIcon">?</div>
+      <div class="status-content">
+        <div class="status-title" id="statusTitle">Проверка...</div>
+        <div class="status-domain" id="statusDomain">—</div>
+        <div class="status-reasons" id="statusReasons"></div>
+      </div>
+    </div>
+
+    <!-- Год создания сайта -->
+    <div class="section" id="creationSection" style="display:none;">
+      <div class="section-title">
+        <span>📅 Год создания сайта</span>
+      </div>
+      <div class="creation-info" id="creationInfo">
+        <div class="creation-year" id="creationYear">—</div>
+        <div class="creation-age" id="creationAge"></div>
+      </div>
+    </div>
+
+    <!-- Генератор паролей -->
+    <div class="section">
+      <div class="section-title"><span>🔑 Генератор паролей</span></div>
+      <div class="password-box">
+        <input type="text" id="generatedPassword" readonly value="Нажмите «Сгенерировать»">
+        <button id="copyBtn" title="Копировать">📋</button>
+      </div>
+      <div class="password-options">
+        <label>Длина: <input type="number" id="passLength" min="8" max="64" value="16"></label>
+      </div>
+      <div class="password-checks">
+        <label><input type="checkbox" id="useUpper" checked> A-Z</label>
+        <label><input type="checkbox" id="useLower" checked> a-z</label>
+        <label><input type="checkbox" id="useDigits" checked> 0-9</label>
+        <label><input type="checkbox" id="useSymbols" checked> !@#</label>
+      </div>
+      <button class="btn btn-primary" id="generateBtn">Сгенерировать</button>
+    </div>
+
+    <!-- Ссылки на сайт -->
+    <div class="section">
+      <div class="section-title">🌐 Перейти на сайт</div>
+      <div class="menu">
+        <button data-page="home">🏠 Главная</button>
+        <button data-page="methods">🛡️ Методики</button>
+        <button data-page="software">📦 Программы</button>
+        <button data-page="forum">💬 Форум</button>
+        <button data-page="profile">👤 Кабинет</button>
+      </div>
+    </div>
+
+    <!-- История -->
+    <div class="section">
+      <div class="section-title">
+        <span>📜 История проверок</span>
+        <button class="link-btn" id="clearHistoryBtn">Очистить</button>
+      </div>
+      <div class="history" id="historyList">
+        <div class="empty">История пуста</div>
+      </div>
+    </div>
+
+    <!-- Синхронизация -->
+    <button class="btn btn-sync" id="syncBtn">🔄 Синхронизировать с сайтом</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>КиберЩит — безопасность в интернете</title>
+  <style>
+    /* ===== ПЕРЕМЕННЫЕ ===== */
+    :root {
+      --bg-page: #f4f7fc;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-light: #94a3b8;
+      --border-color: #e2e8f0;
+      --shadow: 0 6px 18px rgba(0,0,0,0.06);
+      --shadow-hover: 0 12px 28px rgba(0,0,0,0.10);
+      --header-bg: #0b1a2e;
+      --header-text: #e2e8f0;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --badge-bg: #dbeafe;
+      --badge-text: #1e4a8a;
+      --modal-overlay: rgba(0,0,0,0.5);
+      --input-bg: #ffffff;
+      --input-border: #cbd5e1;
+      --extension-bg: linear-gradient(145deg, #0b1a2e, #1a2e44);
+      --extension-text: #ffffff;
+      --footer-bg: #0b1a2e;
+      --footer-text: #94a3b8;
+      --comment-bg: #f8fafc;
+      --pro-color: #0b7e3d;
+      --con-color: #b91c1c;
+      --closed-color: #e74c3c;
+      --toast-bg: #1e293b;
+      --toast-text: #ffffff;
+      --hero-bg-start: #0b1a2e;
+      --hero-bg-end: #1a3a5e;
+    }
+    [data-theme="dark"] {
+      --bg-page: #0f1724;
+      --bg-card: #1e2a3a;
+      --text-primary: #e8edf5;
+      --text-secondary: #b0c4de;
+      --text-light: #7a8aa3;
+      --border-color: #2d3a4f;
+      --shadow: 0 6px 18px rgba(0,0,0,0.4);
+      --shadow-hover: 0 12px 28px rgba(0,0,0,0.6);
+      --header-bg: #070e18;
+      --header-text: #d1dbe8;
+      --badge-bg: #1e3a5f;
+      --badge-text: #a0c4ff;
+      --modal-overlay: rgba(0,0,0,0.7);
+      --input-bg: #1a2537;
+      --input-border: #3a4a62;
+      --extension-bg: linear-gradient(145deg, #0a1520, #1a2a3e);
+      --extension-text: #e8edf5;
+      --footer-bg: #070e18;
+      --footer-text: #7a8aa3;
+      --comment-bg: #141f2e;
+      --pro-color: #6fcf97;
+      --con-color: #f28b82;
+      --closed-color: #f28b82;
+      --toast-bg: #1e2a3a;
+      --toast-text: #e8edf5;
+      --hero-bg-start: #070e18;
+      --hero-bg-end: #0f2a44;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
+    body { background:var(--bg-page); color:var(--text-primary); line-height:1.6; min-height:100vh; }
+    .container { max-width:1300px; margin:0 auto; padding:0 24px; }
+    svg { display:inline-block; vertical-align:middle; fill:currentColor; width:1.2em; height:1.2em; }
+
+    /* ===== АНИМАЦИИ ===== */
+    @keyframes fadeInScale {
+      0% { opacity:0; transform:scale(0.95) translateY(20px); }
+      100% { opacity:1; transform:scale(1) translateY(0); }
+    }
+    @keyframes float {
+      0% { transform:translateY(0px); }
+      50% { transform:translateY(-10px); }
+      100% { transform:translateY(0px); }
+    }
+    @keyframes gradientMove {
+      0% { background-position:0% 50%; }
+      50% { background-position:100% 50%; }
+      100% { background-position:0% 50%; }
+    }
+    .page {
+      display: none;
+      padding:40px 0 50px;
+      animation: fadeInScale 0.5s ease forwards;
+    }
+    .page.active { display:block; }
+    .stagger-children > * {
+      opacity:0;
+      animation: fadeInScale 0.5s ease forwards;
+    }
+    .stagger-children > *:nth-child(1) { animation-delay:0.05s; }
+    .stagger-children > *:nth-child(2) { animation-delay:0.10s; }
+    .stagger-children > *:nth-child(3) { animation-delay:0.15s; }
+    .stagger-children > *:nth-child(4) { animation-delay:0.20s; }
+    .stagger-children > *:nth-child(5) { animation-delay:0.25s; }
+    .stagger-children > *:nth-child(6) { animation-delay:0.30s; }
+
+    /* ===== ТОСТЫ ===== */
+    #toast-container { position:fixed; top:80px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; }
+    .toast { background:var(--toast-bg); color:var(--toast-text); padding:14px 24px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:250px; max-width:400px; animation:slideIn 0.3s ease; display:flex; align-items:center; gap:12px; border-left:4px solid var(--accent); }
+    .toast.error { border-left-color:#e74c3c; }
+    .toast.success { border-left-color:#2ecc71; }
+    .toast svg { width:24px; height:24px; flex-shrink:0; }
+    .toast .toast-close { background:none; border:none; color:var(--text-light); cursor:pointer; margin-left:auto; font-size:20px; }
+    @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+
+    /* ===== ХЕДЕР ===== */
+    header { background:var(--header-bg); color:var(--header-text); padding:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15); position:sticky; top:0; z-index:100; transition:background 0.3s; }
+    .header-flex { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .logo { font-size:26px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:8px; }
+    .logo svg { width:32px; height:32px; color:var(--accent); }
+    .header-controls { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+    .theme-toggle { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:var(--header-text); padding:8px 12px; border-radius:40px; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center; transition:0.2s; width:40px; height:40px; }
+    .theme-toggle:hover { background:rgba(255,255,255,0.16); transform:rotate(20deg); }
+    .nav-links { display:flex; gap:24px; font-weight:500; flex-wrap:wrap; }
+    .nav-links a { color:var(--header-text); text-decoration:none; font-size:15px; padding:4px 0; border-bottom:2px solid transparent; transition:0.3s; display:flex; align-items:center; gap:6px; cursor:pointer; }
+    .nav-links a:hover { color:var(--accent); border-bottom-color:var(--accent); transform:translateY(-2px); }
+    .nav-links a svg { width:18px; height:18px; }
+    .auth-buttons { display:flex; gap:10px; }
+    .auth-buttons button { background:transparent; border:1px solid var(--accent); color:var(--header-text); padding:7px 18px; border-radius:40px; font-weight:600; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:6px; }
+    .auth-buttons button:hover { background:var(--accent); border-color:var(--accent); transform:scale(1.05); }
+    .auth-buttons .register-btn { background:var(--accent); border-color:var(--accent); }
+    .auth-buttons .register-btn:hover { background:var(--accent-hover); }
+    .auth-buttons button svg { width:16px; height:16px; }
+
+    /* ===== ГЛАВНАЯ ===== */
+    .hero {
+      background: linear-gradient(135deg, var(--hero-bg-start), var(--hero-bg-end));
+      background-size: 200% 200%;
+      animation: gradientMove 6s ease infinite;
+      color: white;
+      padding: 80px 40px;
+      border-radius: 40px;
+      margin-bottom: 60px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float 8s ease-in-out infinite;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float 10s ease-in-out infinite reverse;
+    }
+    .hero-content { position:relative; z-index:2; max-width:800px; margin:0 auto; }
+    .hero h1 { font-size:52px; font-weight:800; line-height:1.2; margin-bottom:20px; animation: fadeInScale 0.8s ease; }
+    .hero h1 span { color:var(--accent); }
+    .hero p { font-size:20px; opacity:0.9; margin-bottom:30px; max-width:600px; margin-left:auto; margin-right:auto; animation: fadeInScale 0.9s ease; }
+    .hero .btn-primary { background:var(--accent); color:white; border:none; padding:16px 44px; border-radius:60px; font-size:20px; font-weight:700; cursor:pointer; transition:all 0.3s; box-shadow:0 8px 0 #1e3a6b; display:inline-flex; align-items:center; gap:12px; animation: float 3s ease-in-out infinite; }
+    .hero .btn-primary:hover { background:var(--accent-hover); transform:translateY(-4px) scale(1.02); box-shadow:0 12px 0 #1a335a; }
+    .hero .btn-primary svg { width:24px; height:24px; }
+    .hero-stats { display:flex; justify-content:center; gap:60px; margin-top:40px; animation: fadeInScale 1s ease; }
+    .hero-stats div { text-align:center; }
+    .hero-stats .number { font-size:36px; font-weight:700; color:var(--accent); line-height:1; }
+    .hero-stats .label { font-size:14px; opacity:0.7; margin-top:4px; }
+
+    /* Рекламный баннер расширения на главной */
+    .extension-promo {
+      background: linear-gradient(135deg, #1a2e44, #0b1a2e);
+      border-radius: 30px;
+      padding: 40px 40px;
+      margin: 40px 0 30px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      animation: fadeInScale 1s ease;
+    }
+    .extension-promo:hover { transform:scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+    .extension-promo-text { color:white; max-width:600px; }
+    .extension-promo-text h3 { font-size:28px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
+    .extension-promo-text h3 svg { width:36px; height:36px; color:var(--accent); }
+    .extension-promo-text p { opacity:0.85; font-size:16px; }
+    .extension-promo-btn { background:var(--accent); border:none; padding:14px 36px; border-radius:60px; font-size:18px; font-weight:700; color:white; cursor:pointer; transition:0.3s; display:inline-flex; align-items:center; gap:10px; box-shadow:0 6px 0 #1e3a6b; }
+    .extension-promo-btn:hover { background:var(--accent-hover); transform:translateY(-4px) scale(1.03); box-shadow:0 10px 0 #1a335a; }
+    .extension-promo-btn svg { width:24px; height:24px; }
+
+    /* Преимущества */
+    .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:30px; margin-top:20px; }
+    .feature-item { background:var(--bg-card); padding:36px 24px 30px; border-radius:28px; text-align:center; box-shadow:var(--shadow); border:1px solid var(--border-color); transition:all 0.3s; cursor:default; }
+    .feature-item:hover { transform:translateY(-10px) scale(1.02); box-shadow:var(--shadow-hover); }
+    .feature-item .icon-wrap { display:inline-flex; align-items:center; justify-content:center; width:72px; height:72px; border-radius:50%; background:rgba(59,130,246,0.10); color:var(--accent); font-size:32px; margin-bottom:18px; transition:transform 0.3s; }
+    .feature-item:hover .icon-wrap { transform:scale(1.1) rotate(5deg); }
+    .feature-item .icon-wrap svg { width:36px; height:36px; }
+    .feature-item h3 { font-size:20px; margin-bottom:10px; }
+    .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
+
+    /* Остальные стили */
+    .methods-grid .method-card,
+    .software-grid .software-card,
+    .forum-topic {
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .methods-grid .method-card:hover,
+    .software-grid .software-card:hover,
+    .forum-topic:hover {
+      transform:translateY(-6px) scale(1.01);
+      box-shadow:var(--shadow-hover);
+    }
+
+    .page-title { font-size:32px; font-weight:700; margin-bottom:30px; display:flex; align-items:center; gap:12px; }
+    .page-title svg { width:32px; height:32px; color:var(--accent); }
+    .methods-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:28px; }
+    .method-card { background:var(--bg-card); padding:24px; border-radius:24px; box-shadow:var(--shadow); border-left:6px solid var(--accent); display:flex; flex-direction:column; align-items:center; text-align:center; }
+    .method-card .icon-wrap { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(59,130,246,0.10); color:var(--accent); font-size:28px; margin-bottom:14px; }
+    .method-card .icon-wrap svg { width:32px; height:32px; }
+    .method-card h3 { margin-bottom:8px; font-size:20px; }
+    .method-card p { color:var(--text-secondary); }
+
+    .software-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:30px; }
+    .software-card { background:var(--bg-card); border-radius:24px; padding:24px; box-shadow:var(--shadow); border:1px solid var(--border-color); }
+    .software-card h4 { font-size:22px; display:flex; align-items:center; gap:8px; }
+    .software-card h4 svg { width:28px; height:28px; color:var(--accent); }
+    .software-card .badge { background:var(--badge-bg); color:var(--badge-text); font-size:13px; padding:4px 14px; border-radius:50px; font-weight:600; }
+    .pros-cons { margin:16px 0; display:flex; flex-direction:column; gap:4px; }
+    .pros-cons .pro { color:var(--pro-color); display:flex; align-items:center; gap:6px; }
+    .pros-cons .con { color:var(--con-color); display:flex; align-items:center; gap:6px; }
+    .pros-cons svg { width:16px; height:16px; }
+    .comment-section { margin-top:18px; border-top:1px solid var(--border-color); padding-top:16px; }
+    .comment-input { display:flex; gap:10px; flex-wrap:wrap; }
+    .comment-input input { flex:1; padding:10px 16px; border-radius:40px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-primary); min-width:140px; }
+    .comment-input input:focus { outline:none; border-color:var(--accent); }
+    .comment-input button { background:var(--header-bg); color:white; border:none; padding:10px 24px; border-radius:40px; font-weight:600; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:6px; }
+    .comment-input button:hover { opacity:0.85; transform:scale(1.02); }
+    .comment-input button svg { width:16px; height:16px; }
+    .comment-list { margin-top:14px; font-size:14px; background:var(--comment-bg); padding:12px 16px; border-radius:20px; }
+    .comment-item { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed var(--border-color); }
+    .comment-item:last-child { border:0; }
+    .comment-item .comment-text { flex:1; }
+    .comment-item strong { color:var(--text-primary); margin-right:6px; }
+    .comment-item .delete-comment { background:transparent; border:none; color:var(--text-light); cursor:pointer; font-size:15px; padding:2px 8px; transition:0.2s; }
+    .comment-item .delete-comment:hover { color:#e74c3c; }
+    .comment-item .delete-comment svg { width:16px; height:16px; display:block; }
+
+    .forum-topic { background:var(--bg-card); border-radius:20px; padding:20px 24px; box-shadow:var(--shadow); margin-bottom:20px; border:1px solid var(--border-color); }
+    .forum-topic .topic-title { font-size:22px; font-weight:700; display:flex; align-items:center; gap:12px; }
+    .forum-topic .topic-meta { color:var(--text-secondary); font-size:14px; margin-top:6px; display:flex; gap:20px; flex-wrap:wrap; }
+    .forum-topic .topic-meta span { display:flex; align-items:center; gap:6px; }
+    .forum-topic .topic-meta .closed-badge { background:var(--closed-color); color:white; padding:2px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+    .forum-topic .topic-actions { margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+    .forum-topic .topic-actions button { background:var(--header-bg); color:white; border:none; padding:6px 16px; border-radius:30px; font-weight:600; cursor:pointer; transition:0.2s; display:flex; align-items:center; gap:6px; font-size:14px; }
+    .forum-topic .topic-actions button:hover { opacity:0.8; transform:scale(1.05); }
+    .forum-topic .topic-actions .btn-danger { background:#e74c3c; }
+
+    .forum-post { background:var(--bg-card); border-radius:16px; padding:16px 20px; box-shadow:var(--shadow); margin-bottom:14px; border-left:4px solid var(--accent); }
+    .forum-post.pinned { border-left-color:#f1c40f; border:1px solid #f1c40f; }
+    .forum-post .post-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; }
+    .forum-post .post-author { font-weight:700; display:flex; align-items:center; gap:6px; }
+    .forum-post .post-date { font-size:13px; color:var(--text-light); }
+    .forum-post .post-content { color:var(--text-secondary); margin:6px 0 10px; }
+    .forum-post .post-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .forum-post .post-actions button { background:transparent; border:none; color:var(--text-light); cursor:pointer; padding:4px 8px; transition:0.2s; display:flex; align-items:center; gap:4px; font-size:14px; }
+    .forum-post .post-actions button:hover { color:#e74c3c; }
+    .forum-post .post-actions .pin-btn { color:var(--accent); }
+    .forum-post .post-actions .pin-btn:hover { color:#f1c40f; }
+    .forum-post .post-actions svg { width:16px; height:16px; }
+    .back-to-forum { display:inline-flex; align-items:center; gap:8px; background:var(--header-bg); color:white; padding:8px 20px; border-radius:40px; border:none; font-weight:600; cursor:pointer; transition:0.2s; margin-bottom:20px; }
+    .back-to-forum:hover { opacity:0.8; transform:translateX(-4px); }
+
+    .extension-box {
+      background: var(--extension-bg);
+      color: var(--extension-text);
+      border-radius: 40px;
+      padding: 48px 40px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.25);
+      gap: 30px;
+    }
+    .extension-info { max-width: 600px; flex: 1; }
+    .extension-info h2 { font-size:34px; margin-bottom:12px; display:flex; align-items:center; gap:12px; }
+    .extension-info h2 svg { width:36px; height:36px; color:var(--accent); }
+    .extension-info p { opacity:0.85; margin-bottom:20px; font-size:17px; }
+    .extension-info ul { list-style:none; margin-bottom:24px; }
+    .extension-info li { margin:10px 0; display:flex; align-items:center; gap:10px; }
+    .extension-info li svg { width:20px; height:20px; color:var(--accent); }
+    .download-btn {
+      background: var(--accent);
+      border: none;
+      padding: 16px 44px;
+      border-radius: 60px;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 6px 0 #1e3a6b;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .download-btn:hover {
+      background: var(--accent-hover);
+      transform: scale(1.05) translateY(-4px);
+      box-shadow: 0 10px 0 #1a335a;
+    }
+    .download-btn svg { width:24px; height:24px; }
+    .download-instructions {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 20px;
+      font-size: 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .download-instructions summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .download-instructions ol {
+      margin: 10px 0 0 20px;
+      color: rgba(255,255,255,0.85);
+    }
+    .download-instructions ol li { margin-bottom: 6px; }
+    .extension-mock {
+      background: rgba(255,255,255,0.06);
+      padding: 18px 28px;
+      border-radius: 30px;
+      font-size: 18px;
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(4px);
+      text-align: center;
+      min-width: 160px;
+    }
+    .extension-mock svg { width:48px; height:48px; color:var(--accent); }
+
+    .profile-card { background:var(--bg-card); border-radius:28px; padding:32px; box-shadow:var(--shadow); max-width:500px; margin:0 auto; text-align:center; }
+    .profile-card .avatar { width:100px; height:100px; border-radius:50%; background:var(--accent); display:inline-flex; align-items:center; justify-content:center; font-size:48px; color:white; margin-bottom:16px; }
+    .profile-card .profile-name { font-size:28px; font-weight:700; }
+    .profile-card .profile-role { font-size:16px; color:var(--text-secondary); margin:4px 0 16px; }
+    .profile-card .profile-role .badge { background:var(--badge-bg); color:var(--badge-text); padding:4px 14px; border-radius:20px; font-weight:600; font-size:14px; }
+    .profile-card .btn { background:var(--header-bg); color:white; border:none; padding:10px 24px; border-radius:40px; font-weight:600; cursor:pointer; transition:0.2s; display:inline-flex; align-items:center; gap:8px; margin:4px; }
+    .profile-card .btn:hover { opacity:0.85; transform:scale(1.05); }
+    .profile-card .btn-primary { background:var(--accent); }
+
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--modal-overlay); backdrop-filter:blur(3px); align-items:center; justify-content:center; z-index:1000; }
+    .modal.active { display:flex; }
+    .modal-card { background:var(--bg-card); color:var(--text-primary); padding:36px 40px; border-radius:28px; max-width:480px; width:100%; box-shadow:0 20px 40px rgba(0,0,0,0.3); position:relative; animation:fadeInScale 0.3s ease; }
+    .modal-card h2 { margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+    .modal-card h2 svg { width:28px; height:28px; color:var(--accent); }
+    .modal-card input,.modal-card textarea { width:100%; padding:14px 16px; margin:10px 0; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-primary); border-radius:30px; font-size:15px; }
+    .modal-card textarea { border-radius:20px; resize:vertical; min-height:80px; }
+    .modal-card input:focus,.modal-card textarea:focus { outline:none; border-color:var(--accent); }
+    .modal-card select { width:100%; padding:14px 16px; margin:10px 0; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-primary); border-radius:30px; font-size:15px; }
+    .modal-card button { width:100%; padding:14px; background:var(--header-bg); color:white; border:none; border-radius:40px; font-weight:700; font-size:16px; cursor:pointer; transition:0.2s; margin-top:10px; }
+    .modal-card button:hover { opacity:0.85; transform:scale(1.02); }
+    .modal-close { position:absolute; top:16px; right:24px; font-size:28px; cursor:pointer; color:var(--text-light); }
+    .modal-close:hover { color:var(--text-primary); }
+    .switch-auth { margin-top:18px; text-align:center; color:var(--text-secondary); }
+    .switch-auth span { color:var(--accent); font-weight:600; cursor:pointer; }
+
+    footer { background:var(--footer-bg); color:var(--footer-text); padding:26px 0; text-align:center; margin-top:20px; }
+    footer svg { width:16px; height:16px; }
+
+    .submission-status { display:inline-block; padding:2px 12px; border-radius:20px; font-size:13px; font-weight:600; }
+    .status-pending { background:#f39c12; color:#fff; }
+    .status-approved { background:#2ecc71; color:#fff; }
+    .status-rejected { background:#e74c3c; color:#fff; }
+    .status-reviewed { background:#3498db; color:#fff; }
+
+    @media (max-width:768px) {
+      .header-flex { flex-direction:column; gap:12px; }
+      .header-controls { width:100%; justify-content:center; flex-wrap:wrap; }
+      .nav-links { flex-wrap:wrap; justify-content:center; gap:14px; }
+      .extension-box { flex-direction:column; text-align:center; padding:32px 20px; }
+      .extension-info ul { text-align:left; }
+      .page-title { font-size:26px; }
+      .hero { padding:60px 20px; }
+      .hero h1 { font-size:36px; }
+      .hero-stats { gap:30px; flex-wrap:wrap; }
+      .hero-stats .number { font-size:28px; }
+      .features { grid-template-columns:1fr; }
+      .modal-card { padding:24px; }
+      #toast-container { right:10px; left:10px; }
+      .toast { max-width:100%; }
+      .extension-promo { flex-direction:column; text-align:center; gap:20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== SVG СПРАЙТ (сокращён для читаемости, все символы есть) ===== -->
+<svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1"/></symbol>
+  <symbol id="user-secret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M9 11l2 2 4-4"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="puzzle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M8 4v4m8 0V4m-4 4v4M4 16h16m-4 4v-4m-8 4v-4"/><rect x="2" y="2" width="20" height="20" rx="2"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v6"/><path d="M9 11h6"/></symbol>
+  <symbol id="key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="21" y2="2"/><line x1="18" y1="8" x2="21" y2="11"/><line x1="15" y1="5" x2="18" y2="8"/></symbol>
+  <symbol id="wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a10.94 10.94 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.94 0"/><circle cx="12" cy="20" r="1"/></symbol>
+  <symbol id="envelope" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></symbol>
+  <symbol id="database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></symbol>
+  <symbol id="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></symbol>
+  <symbol id="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="log-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></symbol>
+  <symbol id="user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></symbol>
+  <symbol id="plus-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+  <symbol id="minus-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+  <symbol id="paper-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+  <symbol id="download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="copyright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M10 9.3a3 3 0 014 0M10 14.7a3 3 0 014 0"/></symbol>
+  <symbol id="bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 010-18"/><path d="M12 21a9 9 0 000-18"/><path d="M8 7l-2-2M16 7l2-2M8 17l-2 2M16 17l2 2"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="skull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="8"/><path d="M8 14l2 2M16 14l-2 2"/><line x1="9" y1="18" x2="15" y2="18"/><path d="M10 18v2M14 18v2"/></symbol>
+  <symbol id="message-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></symbol>
+  <symbol id="lock-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></symbol>
+  <symbol id="lock-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 019.9-1"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 002-2V2H7v2a2 2 0 002 2h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></symbol>
+  <symbol id="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+</svg>
+
+<!-- ===== ТОСТ-КОНТЕЙНЕР ===== -->
+<div id="toast-container"></div>
+
+<!-- ===== ХЕДЕР ===== -->
+<header>
+  <div class="container header-flex">
+    <div class="logo"><svg><use href="#shield"/></svg> КиберЩит</div>
+    <div class="header-controls">
+      <div class="nav-links">
+        <a data-page="home"><svg><use href="#home"/></svg> Главная</a>
+        <a data-page="methods"><svg><use href="#user-secret"/></svg> Методики</a>
+        <a data-page="software"><svg><use href="#list"/></svg> Программы</a>
+        <a data-page="forum"><svg><use href="#message-circle"/></svg> Форум</a>
+        <a data-page="extension"><svg><use href="#puzzle"/></svg> Расширение</a>
+        <a data-page="submit"><svg><use href="#plus-circle"/></svg> Предложить</a>
+        <a data-page="submissions"><svg><use href="#list"/></svg> Заявки</a>
+        <a data-page="profile" id="profileLink" style="display:none;"><svg><use href="#user"/></svg> Кабинет</a>
+      </div>
+      <button class="theme-toggle" id="themeToggle"><svg><use href="#moon"/></svg></button>
+      <div class="auth-buttons">
+        <button id="loginBtn"><svg><use href="#log-in"/></svg> Вход</button>
+        <button id="registerBtn" class="register-btn"><svg><use href="#user-plus"/></svg> Регистрация</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== МОДАЛКИ ===== -->
+<div id="loginModal" class="modal">
+  <div class="modal-card">
+    <span class="modal-close" id="closeLogin">&times;</span>
+    <h2><svg><use href="#log-in"/></svg> Вход</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Пароль">
+    <button id="loginSubmit">Войти</button>
+    <div class="switch-auth">Нет аккаунта? <span id="switchToRegister">Зарегистрироваться</span></div>
+  </div>
+</div>
+
+<div id="registerModal" class="modal">
+  <div class="modal-card">
+    <span class="modal-close" id="closeRegister">&times;</span>
+    <h2><svg><use href="#user-plus"/></svg> Регистрация</h2>
+    <input type="text" id="regUsername" placeholder="Имя пользователя">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Пароль">
+    <select id="regRole">
+      <option value="user">Пользователь</option>
+      <option value="moderator">Сотрудник (модератор)</option>
+    </select>
+    <button id="registerSubmit">Создать аккаунт</button>
+    <div class="switch-auth">Уже есть аккаунт? <span id="switchToLogin">Войти</span></div>
+  </div>
+</div>
+
+<!-- ===== СТРАНИЦЫ ===== -->
+<main>
+  <!-- ГЛАВНАЯ -->
+  <div class="page active" id="page-home">
+    <div class="container">
+      <div class="hero">
+        <div class="hero-content">
+          <h1>Защитите себя <br><span>в цифровом мире</span></h1>
+          <p>КиберЩит — ваш надёжный помощник в безопасности. Методики, обзоры антивирусов и собственное расширение для браузера.</p>
+          <button class="btn-primary" onclick="navigateTo('methods')"><svg><use href="#arrow-right"/></svg> Начать защиту</button>
+          <div class="hero-stats">
+            <div><div class="number">12+</div><div class="label">Методик</div></div>
+            <div><div class="number">150+</div><div class="label">Пользователей</div></div>
+            <div><div class="number">4.8</div><div class="label">Рейтинг</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="extension-promo">
+        <div class="extension-promo-text">
+          <h3><svg><use href="#puzzle"/></svg> КиберЩит – расширение для браузера</h3>
+          <p>Блокирует трекеры, предупреждает о фишинге и защищает ваши данные. Установите бесплатно!</p>
+        </div>
+        <button class="extension-promo-btn" onclick="navigateTo('extension')">
+          <svg><use href="#download"/></svg> Установить сейчас
+        </button>
+      </div>
+
+      <div class="features stagger-children">
+        <div class="feature-item"><div class="icon-wrap"><svg><use href="#shield"/></svg></div><h3>Актуальные методики</h3><p>Простые и эффективные советы по защите от цифровых угроз.</p></div>
+        <div class="feature-item"><div class="icon-wrap"><svg><use href="#list"/></svg></div><h3>Честные обзоры</h3><p>Плюсы и минусы популярных антивирусов и утилит.</p></div>
+        <div class="feature-item"><div class="icon-wrap"><svg><use href="#puzzle"/></svg></div><h3>Собственное расширение</h3><p>Блокировка трекеров, менеджер паролей и защита от фишинга.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МЕТОДИКИ -->
+  <div class="page" id="page-methods">
+    <div class="container">
+      <div class="page-title"><svg><use href="#user-secret"/></svg> Методики безопасности</div>
+      <div class="methods-grid stagger-children">
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#key"/></svg></div><h3>Пароли</h3><p>Менеджеры паролей, 2FA, уникальные сложные пароли для каждого сервиса.</p></div>
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#wifi"/></svg></div><h3>Wi-Fi</h3><p>Не подключайтесь к публичным сетям без VPN. Отключайте автоподключение.</p></div>
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#envelope"/></svg></div><h3>Фишинг</h3><p>Проверяйте отправителя, не переходите по подозрительным ссылкам.</p></div>
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#shield"/></svg></div><h3>Антивирус</h3><p>Регулярно обновляйте базы, включите реальную защиту.</p></div>
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#lock"/></svg></div><h3>Браузер</h3><p>Отключите сторонние cookie, используйте режим инкогнито.</p></div>
+        <div class="method-card"><div class="icon-wrap"><svg><use href="#database"/></svg></div><h3>Резервное копирование</h3><p>Бэкапы важных данных в зашифрованном виде на внешних носителях.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ПРОГРАММЫ -->
+  <div class="page" id="page-software">
+    <div class="container">
+      <div class="page-title"><svg><use href="#list"/></svg> Обзоры антивирусов и утилит</div>
+      <div style="margin-bottom:20px;">
+        <button id="suggestProgramBtn" class="btn-primary" style="background:var(--accent);border:none;padding:12px 28px;border-radius:40px;color:white;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:0.3s;">
+          <svg><use href="#plus-circle"/></svg> Предложить программу
+        </button>
+      </div>
+      <div class="software-grid stagger-children" id="softwareGrid"></div>
+    </div>
+  </div>
+
+  <!-- ФОРУМ -->
+  <div class="page" id="page-forum">
+    <div class="container">
+      <div class="page-title"><svg><use href="#message-circle"/></svg> Форум безопасности</div>
+      <div style="margin-bottom:20px;">
+        <button id="newTopicBtn" class="btn-primary" style="background:var(--accent);border:none;padding:12px 28px;border-radius:40px;color:white;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:0.3s;"><svg><use href="#plus-circle"/></svg> Создать тему</button>
+      </div>
+      <div id="forumTopicsList" class="stagger-children"></div>
+    </div>
+  </div>
+
+  <!-- СТРАНИЦА ПРОСМОТРА ТЕМЫ -->
+  <div class="page" id="page-topic-view">
+    <div class="container">
+      <button class="back-to-forum" onclick="navigateTo('forum')"><svg><use href="#arrow-right"/></svg> Назад к списку</button>
+      <div id="topicViewFull"></div>
+    </div>
+  </div>
+
+  <!-- ===== РАСШИРЕНИЕ (исправленная кнопка) ===== -->
+  <div class="page" id="page-extension">
+    <div class="container">
+      <div class="extension-box">
+        <div class="extension-info">
+          <h2><svg><use href="#puzzle"/></svg> Расширение КиберЩит</h2>
+          <p>Блокирует трекеры, предупреждает о фишинге, проверяет пароли и шифрует данные. Установите бесплатно!</p>
+          <ul>
+            <li><svg><use href="#check-circle"/></svg> Защита от вредоносных сайтов</li>
+            <li><svg><use href="#check-circle"/></svg> Менеджер паролей прямо в браузере</li>
+            <li><svg><use href="#check-circle"/></svg> Автоматическое обновление угроз</li>
+            <li><svg><use href="#check-circle"/></svg> Режим «Инкогнито+»</li>
+          </ul>
+<a href="/kibershit_extension.zip" download class="download-btn">
+  <svg><use href="#download"/></svg> Скачать расширение (ZIP)
+</a>
+          <div class="download-instructions">
+            <details>
+              <summary>📖 Инструкция по установке</summary>
+              <ol>
+                <li>Скачайте файл <strong>kibershit_extension.crx</strong>.</li>
+                <li>Откройте браузер и перейдите на страницу расширений: <code>chrome://extensions/</code> (для Edge: <code>edge://extensions/</code>).</li>
+                <li>Включите <strong>«Режим разработчика»</strong> (переключатель в правом верхнем углу).</li>
+                <li>Перетащите скачанный файл <strong>.crx</strong> в окно расширений.</li>
+                <li>Подтвердите установку в появившемся диалоге.</li>
+                <li>Готово! Иконка КиберЩит появится на панели браузера.</li>
+              </ol>
+            </details>
+          </div>
+          <p style="margin-top:18px; opacity:0.6; font-size:14px;">Поддерживает Chrome, Edge, Opera, Яндекс.Браузер и другие на базе Chromium.</p>
+        </div>
+        <div class="extension-mock">
+          <svg><use href="#shield"/></svg>
+          <div style="margin-top:10px;">v2.4.1</div>
+          <div style="font-size:13px; opacity:0.7;">2,3k установок</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЛИЧНЫЙ КАБИНЕТ -->
+  <div class="page" id="page-profile">
+    <div class="container">
+      <div class="page-title"><svg><use href="#user"/></svg> Личный кабинет</div>
+      <div id="profileContent"></div>
+    </div>
+  </div>
+
+  <!-- СТРАНИЦЫ ЗАЯВОК -->
+  <div class="page" id="page-submit">
+    <div class="container">
+      <div class="page-title"><svg><use href="#plus-circle"/></svg> Предложить программу</div>
+      <div style="max-width:600px;margin:0 auto;background:var(--bg-card);padding:32px;border-radius:28px;box-shadow:var(--shadow);">
+        <form id="submitForm">
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:4px;">Название программы</label>
+            <input type="text" id="subName" placeholder="Например: SuperAntivirus" style="width:100%;padding:12px 16px;border-radius:30px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:4px;">Описание</label>
+            <textarea id="subDescription" placeholder="Краткое описание программы..." style="width:100%;padding:12px 16px;border-radius:20px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);resize:vertical;min-height:100px;"></textarea>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:600;display:block;margin-bottom:4px;">Ссылка для скачивания</label>
+            <input type="url" id="subUrl" placeholder="https://example.com/download" style="width:100%;padding:12px 16px;border-radius:30px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);">
+          </div>
+          <button type="submit" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:40px;font-weight:700;font-size:16px;cursor:pointer;transition:0.3s;">Отправить на проверку</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-submissions">
+    <div class="container">
+      <div class="page-title"><svg><use href="#list"/></svg> <span id="submissionsTitle">Мои заявки</span></div>
+      <div id="submissionsList" class="stagger-children"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-submission-detail">
+    <div class="container">
+      <button class="back-to-forum" onclick="navigateTo('submissions')"><svg><use href="#arrow-right"/></svg> Назад к списку</button>
+      <div id="submissionDetailContent"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <p><svg><use href="#copyright"/></svg> 2026 КиберЩит — ваш помощник в безопасности. Все права защищены.</p>
+  </div>
+</footer>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ ТЕМЫ ===== -->
+<div id="newTopicModal" class="modal">
+  <div class="modal-card">
+    <span class="modal-close" id="closeNewTopic">&times;</span>
+    <h2><svg><use href="#message-circle"/></svg> Новая тема</h2>
+    <input type="text" id="topicTitle" placeholder="Заголовок темы">
+    <textarea id="topicContent" placeholder="Содержание темы..."></textarea>
+    <button id="submitTopicBtn">Создать тему</button>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ===== ТОСТЫ =====
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const iconMap = { success: 'check-circle', error: 'info', info: 'info' };
+      toast.innerHTML = `
+        <svg><use href="#${iconMap[type] || 'info'}"/></svg>
+        <span>${message}</span>
+        <button class="toast-close">&times;</button>
+      `;
+      container.appendChild(toast);
+      toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+    }
+
+    // ===== НАВИГАЦИЯ =====
+    const pages = {
+      home: document.getElementById('page-home'),
+      methods: document.getElementById('page-methods'),
+      software: document.getElementById('page-software'),
+      forum: document.getElementById('page-forum'),
+      'topic-view': document.getElementById('page-topic-view'),
+      extension: document.getElementById('page-extension'),
+      profile: document.getElementById('page-profile'),
+      submit: document.getElementById('page-submit'),
+      submissions: document.getElementById('page-submissions'),
+      'submission-detail': document.getElementById('page-submission-detail')
+    };
+
+    function showPage(pageId, params) {
+      Object.keys(pages).forEach(key => {
+        pages[key].classList.toggle('active', key === pageId);
+      });
+      window.location.hash = pageId;
+      if (pageId === 'forum') loadTopics();
+      if (pageId === 'profile') loadProfile();
+      if (pageId === 'submissions') loadSubmissions();
+      if (pageId === 'topic-view' && params && params.topicId) {
+        localStorage.setItem('currentTopicId', params.topicId);
+        loadTopicView(params.topicId);
+      }
+      if (pageId === 'submission-detail' && params && params.submissionId) {
+        localStorage.setItem('currentSubmissionId', params.submissionId);
+        loadSubmissionDetail(params.submissionId);
+      }
+      if (pageId === 'submission-detail' && !params) {
+        const saved = localStorage.getItem('currentSubmissionId');
+        if (saved) loadSubmissionDetail(parseInt(saved));
+      }
+    }
+    window.navigateTo = showPage;
+
+    document.querySelectorAll('.nav-links a[data-page]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const page = this.dataset.page;
+        if (page === 'topic-view' || page === 'submission-detail') return;
+        showPage(page);
+      });
+    });
+
+    function restorePageFromHash() {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && pages[hash]) {
+        if (hash === 'topic-view') {
+          const saved = localStorage.getItem('currentTopicId');
+          if (saved) showPage('topic-view', { topicId: parseInt(saved) });
+          else showPage('forum');
+        } else if (hash === 'submission-detail') {
+          const saved = localStorage.getItem('currentSubmissionId');
+          if (saved) showPage('submission-detail', { submissionId: parseInt(saved) });
+          else showPage('submissions');
+        } else {
+          showPage(hash);
+        }
+      } else {
+        showPage('home');
+      }
+    }
+    window.addEventListener('hashchange', restorePageFromHash);
+    restorePageFromHash();
+
+    // ===== ТЕМА =====
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      const isDark = theme === 'dark';
+      themeToggle.innerHTML = `<svg><use href="${isDark ? '#sun' : '#moon'}"/></svg>`;
+    }
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    themeToggle.addEventListener('click', function() {
+      const current = document.documentElement.getAttribute('data-theme');
+      setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // ===== АВТОРИЗАЦИЯ =====
+    let currentUser = null, currentUserId = null, currentRole = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me');
+        const data = await res.json();
+        if (data.authenticated) {
+          currentUser = data.username;
+          currentUserId = data.userId;
+          currentRole = data.role;
+          updateAuthUI(true);
+          document.getElementById('profileLink').style.display = 'inline-flex';
+        } else {
+          currentUser = currentUserId = currentRole = null;
+          updateAuthUI(false);
+          document.getElementById('profileLink').style.display = 'none';
+        }
+      } catch (e) { console.error('Auth error', e); }
+    }
+
+    function updateAuthUI(isAuth) {
+      const loginBtn = document.getElementById('loginBtn');
+      const registerBtn = document.getElementById('registerBtn');
+      const newLoginBtn = loginBtn.cloneNode(true);
+      loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
+      const newRegisterBtn = registerBtn.cloneNode(true);
+      registerBtn.parentNode.replaceChild(newRegisterBtn, registerBtn);
+
+      const updatedLoginBtn = document.getElementById('loginBtn');
+      const updatedRegisterBtn = document.getElementById('registerBtn');
+
+      if (isAuth) {
+        updatedLoginBtn.innerHTML = `<svg><use href="#user"/></svg> ${currentUser}`;
+        updatedLoginBtn.onclick = () => showPage('profile');
+        updatedRegisterBtn.textContent = 'Выйти';
+        updatedRegisterBtn.className = '';
+        updatedRegisterBtn.onclick = logout;
+      } else {
+        updatedLoginBtn.innerHTML = `<svg><use href="#log-in"/></svg> Вход`;
+        updatedLoginBtn.onclick = () => openModal(loginModal);
+        updatedRegisterBtn.innerHTML = `<svg><use href="#user-plus"/></svg> Регистрация`;
+        updatedRegisterBtn.className = 'register-btn';
+        updatedRegisterBtn.onclick = () => openModal(registerModal);
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      currentUser = currentUserId = currentRole = null;
+      updateAuthUI(false);
+      document.getElementById('profileLink').style.display = 'none';
+      showToast('Вы вышли из аккаунта', 'info');
+      showPage('home');
+      loadTopics();
+    }
+
+    // ===== ПРОГРАММЫ =====
+    async function loadSoftware() {
+      try {
+        const res = await fetch('/api/software');
+        const data = await res.json();
+        renderSoftware(data);
+      } catch (e) { console.error('Ошибка загрузки программ', e); }
+    }
+
+    function renderSoftware(software) {
+      const grid = document.getElementById('softwareGrid');
+      grid.innerHTML = '';
+      software.forEach(prog => {
+        const card = document.createElement('div');
+        card.className = 'software-card';
+        const prosHtml = prog.pros.map(p => `<div class="pro"><svg><use href="#plus-circle"/></svg> ${p}</div>`).join('');
+        const consHtml = prog.cons.map(c => `<div class="con"><svg><use href="#minus-circle"/></svg> ${c}</div>`).join('');
+        let commentsHtml = '';
+        if (prog.comments.length) {
+          commentsHtml = prog.comments.map(c => {
+            const isAuthor = currentUserId && c.userId === currentUserId;
+            return `<div class="comment-item" data-comment-id="${c.id}">
+              <div class="comment-text"><strong>${c.username}:</strong> ${c.text}</div>
+              ${isAuthor ? `<button class="delete-comment" title="Удалить"><svg><use href="#trash"/></svg></button>` : ''}
+            </div>`;
+          }).join('');
+        } else {
+          commentsHtml = '<div style="color:var(--text-light);">Пока нет комментариев.</div>';
+        }
+        const iconMap = { 'shield':'shield', 'bug':'bug', 'skull':'skull' };
+        const iconName = iconMap[prog.icon] || 'shield';
+        card.innerHTML = `
+          <h4><svg><use href="#${iconName}"/></svg> ${prog.name} <span class="badge">обзор</span></h4>
+          <div class="pros-cons">${prosHtml}${consHtml}</div>
+          <div class="comment-section">
+            <div class="comment-input">
+              <input type="text" placeholder="Ваш комментарий..." class="comment-input-field" data-id="${prog.id}">
+              <button class="comment-submit" data-id="${prog.id}"><svg><use href="#paper-plane"/></svg> Отправить</button>
+            </div>
+            <div class="comment-list" id="commentList-${prog.id}">${commentsHtml}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.querySelectorAll('.comment-submit').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+          e.preventDefault();
+          const id = this.dataset.id;
+          const input = document.querySelector(`.comment-input-field[data-id="${id}"]`);
+          const text = input.value.trim();
+          if (!text) { showToast('Напишите комментарий', 'error'); return; }
+          if (!currentUser) { showToast('Войдите, чтобы комментировать', 'error'); document.getElementById('loginBtn').click(); return; }
+          try {
+            const res = await fetch('/api/comments', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ softwareId:id, text }) });
+            const data = await res.json();
+            if (data.success) {
+              const list = document.getElementById(`commentList-${id}`);
+              const newComment = document.createElement('div');
+              newComment.className = 'comment-item';
+              newComment.dataset.commentId = data.commentId;
+              newComment.innerHTML = `<div class="comment-text"><strong>${currentUser}:</strong> ${text}</div><button class="delete-comment" title="Удалить"><svg><use href="#trash"/></svg></button>`;
+              if (list.innerHTML.includes('Пока нет комментариев')) list.innerHTML = '';
+              list.prepend(newComment);
+              input.value = '';
+              attachDeleteHandler(newComment.querySelector('.delete-comment'), data.commentId);
+              showToast('Комментарий добавлен', 'success');
+            } else showToast(data.error || 'Ошибка', 'error');
+          } catch(err) { showToast('Ошибка сервера', 'error'); }
+        });
+      });
+
+      document.querySelectorAll('.delete-comment').forEach(btn => {
+        const commentItem = btn.closest('.comment-item');
+        attachDeleteHandler(btn, commentItem.dataset.commentId);
+      });
+    }
+
+    function attachDeleteHandler(btn, commentId) {
+      if (!btn) return;
+      btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (!confirm('Удалить комментарий?')) return;
+        try {
+          const res = await fetch(`/api/comments/${commentId}`, { method:'DELETE' });
+          const data = await res.json();
+          if (data.success) { const item = this.closest('.comment-item'); if (item) item.remove(); showToast('Комментарий удалён', 'success'); }
+          else showToast(data.error || 'Не удалось удалить', 'error');
+        } catch(err) { showToast('Ошибка сервера', 'error'); }
+      });
+    }
+
+    // ===== ФОРУМ =====
+    async function loadTopics() {
+      try {
+        const res = await fetch('/api/topics');
+        const topics = await res.json();
+        const container = document.getElementById('forumTopicsList');
+        container.innerHTML = '';
+        if (topics.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-light);">Пока нет тем. Создайте первую!</p>';
+          return;
+        }
+        topics.forEach(topic => {
+          const div = document.createElement('div');
+          div.className = 'forum-topic';
+          const closedBadge = topic.closed ? '<span class="closed-badge">Закрыта</span>' : '';
+          div.innerHTML = `
+            <div class="topic-title">${topic.title} ${closedBadge}</div>
+            <div class="topic-meta">
+              <span><svg><use href="#user"/></svg> ${topic.username}</span>
+              <span><svg><use href="#message-circle"/></svg> ${topic.post_count || 0} ответов</span>
+              <span>${new Date(topic.created_at).toLocaleString()}</span>
+            </div>
+            <div class="topic-actions">
+              <button class="view-topic" data-id="${topic.id}"><svg><use href="#message-circle"/></svg> Открыть</button>
+              ${currentRole === 'moderator' ? `
+                <button class="toggle-close" data-id="${topic.id}" data-closed="${topic.closed}">
+                  ${topic.closed ? '<svg><use href="#lock-open"/></svg> Открыть' : '<svg><use href="#lock-closed"/></svg> Закрыть'}
+                </button>
+                <button class="delete-topic btn-danger" data-id="${topic.id}"><svg><use href="#trash"/></svg> Удалить тему</button>
+              ` : ''}
+            </div>
+          `;
+          container.appendChild(div);
+        });
+
+        document.querySelectorAll('.view-topic').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            localStorage.setItem('currentTopicId', id);
+            showPage('topic-view', { topicId: parseInt(id) });
+          });
+        });
+
+        if (currentRole === 'moderator') {
+          document.querySelectorAll('.toggle-close').forEach(btn => {
+            btn.addEventListener('click', async function() {
+              const id = this.dataset.id;
+              const closed = this.dataset.closed === '1' ? 0 : 1;
+              try {
+                const res = await fetch(`/api/topics/${id}/close`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ closed }) });
+                const data = await res.json();
+                if (data.success) { loadTopics(); showToast('Тема обновлена', 'success'); }
+                else showToast(data.error, 'error');
+              } catch(e) { showToast('Ошибка', 'error'); }
+            });
+          });
+
+          document.querySelectorAll('.delete-topic').forEach(btn => {
+            btn.addEventListener('click', async function() {
+              if (!confirm('Удалить тему и все сообщения?')) return;
+              const id = this.dataset.id;
+              try {
+                const res = await fetch(`/api/topics/${id}`, { method:'DELETE' });
+                const data = await res.json();
+                if (data.success) { loadTopics(); showToast('Тема удалена', 'success'); }
+                else showToast(data.error, 'error');
+              } catch(e) { showToast('Ошибка', 'error'); }
+            });
+          });
+        }
+      } catch(e) { console.error('Ошибка загрузки тем', e); }
+    }
+
+    // ===== ПРОСМОТР ТЕМЫ =====
+    async function loadTopicView(topicId) {
+      try {
+        const res = await fetch(`/api/topics/${topicId}`);
+        const data = await res.json();
+        if (!data.topic) { showToast('Тема не найдена', 'error'); navigateTo('forum'); return; }
+        const container = document.getElementById('topicViewFull');
+        const topic = data.topic;
+        const posts = data.posts;
+        const closed = topic.closed;
+
+        let postsHtml = posts.map(p => {
+          const isPinned = p.pinned === 1;
+          const pinClass = isPinned ? 'pinned' : '';
+          const isAuthor = currentUserId === p.user_id;
+          const isModerator = currentRole === 'moderator';
+          return `
+            <div class="forum-post ${pinClass}">
+              <div class="post-header">
+                <span class="post-author"><svg><use href="#user"/></svg> ${p.username} ${isPinned ? '📌' : ''}</span>
+                <span class="post-date">${new Date(p.created_at).toLocaleString()}</span>
+              </div>
+              <div class="post-content">${p.content}</div>
+              <div class="post-actions">
+                ${(isAuthor || isModerator) ? `<button class="delete-post" data-id="${p.id}"><svg><use href="#trash"/></svg> Удалить</button>` : ''}
+                ${isModerator ? `<button class="pin-post" data-id="${p.id}" data-pinned="${p.pinned}">${isPinned ? '📌 Открепить' : '📌 Закрепить'}</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <h2 style="display:flex;align-items:center;gap:12px;">${topic.title} ${closed ? '<span style="color:var(--closed-color);font-size:18px;">(Закрыта)</span>' : ''}</h2>
+            <p style="color:var(--text-secondary);">${topic.content}</p>
+            <div style="color:var(--text-light);font-size:14px;margin-top:8px;">
+              <span><svg><use href="#user"/></svg> ${topic.username}</span>
+              <span style="margin-left:16px;">${new Date(topic.created_at).toLocaleString()}</span>
+            </div>
+          </div>
+          <hr style="border-color:var(--border-color);margin:12px 0;">
+          <div id="topicPostsFull">${postsHtml}</div>
+          ${!closed || currentRole === 'moderator' ? `
+            <div style="margin-top:20px;">
+              <textarea id="newPostContentFull" placeholder="Ваш ответ..." style="width:100%;padding:12px;border-radius:20px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);resize:vertical;"></textarea>
+              <button id="submitPostFull" data-topic="${topicId}" style="margin-top:8px;background:var(--accent);color:white;border:none;padding:10px 24px;border-radius:40px;font-weight:600;cursor:pointer;">Отправить</button>
+            </div>
+          ` : (closed ? '<p style="color:var(--text-light);">Тема закрыта для ответов.</p>' : '')}
+        `;
+
+        document.getElementById('submitPostFull')?.addEventListener('click', async function() {
+          const topicId = this.dataset.topic;
+          const content = document.getElementById('newPostContentFull').value.trim();
+          if (!content) { showToast('Введите текст', 'error'); return; }
+          try {
+            const res = await fetch('/api/posts', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ topicId, content }) });
+            const data = await res.json();
+            if (data.success) {
+              showToast('Сообщение добавлено', 'success');
+              loadTopicView(topicId);
+            } else showToast(data.error || 'Ошибка', 'error');
+          } catch(e) { showToast('Ошибка сервера', 'error'); }
+        });
+
+        document.querySelectorAll('.delete-post').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            if (!confirm('Удалить сообщение?')) return;
+            const postId = this.dataset.id;
+            try {
+              const res = await fetch(`/api/posts/${postId}`, { method:'DELETE' });
+              const data = await res.json();
+              if (data.success) { showToast('Сообщение удалено', 'success'); loadTopicView(topicId); }
+              else showToast(data.error, 'error');
+            } catch(e) { showToast('Ошибка', 'error'); }
+          });
+        });
+
+        document.querySelectorAll('.pin-post').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const postId = this.dataset.id;
+            const currentPinned = this.dataset.pinned === '1' ? 0 : 1;
+            try {
+              const res = await fetch(`/api/posts/${postId}/pin`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ pinned: currentPinned }) });
+              const data = await res.json();
+              if (data.success) { showToast('Сообщение обновлено', 'success'); loadTopicView(topicId); }
+              else showToast(data.error, 'error');
+            } catch(e) { showToast('Ошибка', 'error'); }
+          });
+        });
+
+      } catch(e) { console.error('Ошибка загрузки темы', e); }
+    }
+
+    document.getElementById('newTopicBtn').addEventListener('click', function() {
+      if (!currentUser) { showToast('Войдите, чтобы создать тему.', 'error'); document.getElementById('loginBtn').click(); return; }
+      document.getElementById('newTopicModal').classList.add('active');
+    });
+    document.getElementById('closeNewTopic').addEventListener('click', function() {
+      document.getElementById('newTopicModal').classList.remove('active');
+    });
+    document.getElementById('submitTopicBtn').addEventListener('click', async function() {
+      const title = document.getElementById('topicTitle').value.trim();
+      const content = document.getElementById('topicContent').value.trim();
+      if (!title || !content) { showToast('Заполните все поля', 'error'); return; }
+      try {
+        const res = await fetch('/api/topics', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title, content }) });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('newTopicModal').classList.remove('active');
+          document.getElementById('topicTitle').value = '';
+          document.getElementById('topicContent').value = '';
+          showToast('Тема создана!', 'success');
+          loadTopics();
+          showPage('forum');
+        } else showToast(data.error, 'error');
+      } catch(e) { showToast('Ошибка', 'error'); }
+    });
+
+    // ===== ЛИЧНЫЙ КАБИНЕТ =====
+    function loadProfile() {
+      const container = document.getElementById('profileContent');
+      if (!currentUser) {
+        container.innerHTML = '<p>Войдите, чтобы просмотреть профиль.</p>';
+        return;
+      }
+      const isModerator = currentRole === 'moderator';
+      container.innerHTML = `
+        <div class="profile-card">
+          <div class="avatar"><svg><use href="#user"/></svg></div>
+          <div class="profile-name">${currentUser}</div>
+          <div class="profile-role"><span class="badge">${isModerator ? 'Сотрудник (модератор)' : 'Пользователь'}</span></div>
+          ${isModerator ? `<button class="btn btn-primary" onclick="showPage('forum')"><svg><use href="#message-circle"/></svg> Перейти в модераторскую панель</button>` : ''}
+          <button class="btn" onclick="logout()"><svg><use href="#log-in"/></svg> Выйти</button>
+        </div>
+      `;
+    }
+
+    // ===== ЗАЯВКИ =====
+    async function loadSubmissions() {
+      try {
+        const res = await fetch('/api/submissions');
+        const data = await res.json();
+        const container = document.getElementById('submissionsList');
+        container.innerHTML = '';
+        if (data.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-light);">Нет заявок.</p>';
+          return;
+        }
+        const isModerator = currentRole === 'moderator';
+        document.getElementById('submissionsTitle').textContent = isModerator ? 'Все заявки' : 'Мои заявки';
+        const statusMap = { 'pending': '⏳ На рассмотрении', 'approved': '✅ Одобрено', 'rejected': '❌ Отклонено', 'reviewed': '📝 Проверено' };
+        data.forEach(sub => {
+          const div = document.createElement('div');
+          div.className = 'forum-topic';
+          div.innerHTML = `
+            <div class="topic-title">${sub.name} <span style="font-size:14px;font-weight:400;color:var(--text-light);">${statusMap[sub.status] || sub.status}</span></div>
+            <div class="topic-meta">
+              <span><svg><use href="#user"/></svg> ${sub.username}</span>
+              <span>${new Date(sub.created_at).toLocaleString()}</span>
+            </div>
+            <div class="topic-actions">
+              <button class="view-submission" data-id="${sub.id}"><svg><use href="#message-circle"/></svg> Подробнее</button>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+
+        document.querySelectorAll('.view-submission').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            localStorage.setItem('currentSubmissionId', id);
+            showPage('submission-detail', { submissionId: parseInt(id) });
+          });
+        });
+      } catch(e) { console.error('Ошибка загрузки заявок', e); }
+    }
+
+    async function loadSubmissionDetail(id) {
+      try {
+        const res = await fetch(`/api/submissions/${id}`);
+        const data = await res.json();
+        const container = document.getElementById('submissionDetailContent');
+        const isModerator = currentRole === 'moderator';
+        let actionsHtml = '';
+        if (isModerator && data.status === 'pending') {
+          actionsHtml = `
+            <div style="margin-top:20px;border-top:1px solid var(--border-color);padding-top:20px;">
+              <h4>Действия модератора</h4>
+              <div style="margin-bottom:12px;">
+                <label style="font-weight:600;">Анализ (заключение)</label>
+                <textarea id="reviewText" placeholder="Напишите ваш анализ..." style="width:100%;padding:12px;border-radius:20px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);resize:vertical;min-height:80px;"></textarea>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="approveBtn" class="btn-primary" style="background:#2ecc71;border:none;padding:10px 24px;border-radius:40px;color:white;font-weight:700;cursor:pointer;">✅ Одобрить</button>
+                <button id="rejectBtn" style="background:#e74c3c;border:none;padding:10px 24px;border-radius:40px;color:white;font-weight:700;cursor:pointer;">❌ Отклонить</button>
+              </div>
+              <div id="approveFields" style="display:none;margin-top:12px;border:1px solid var(--border-color);padding:16px;border-radius:20px;">
+                <div style="margin-bottom:8px;">
+                  <label>Плюсы (через запятую)</label>
+                  <input type="text" id="prosInput" placeholder="Например: Легкий, Быстрый" style="width:100%;padding:10px;border-radius:30px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);">
+                </div>
+                <div style="margin-bottom:8px;">
+                  <label>Минусы (через запятую)</label>
+                  <input type="text" id="consInput" placeholder="Например: Платная версия" style="width:100%;padding:10px;border-radius:30px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text-primary);">
+                </div>
+                <button id="confirmApproveBtn" style="background:#2ecc71;border:none;padding:10px 24px;border-radius:40px;color:white;font-weight:700;cursor:pointer;">Подтвердить добавление</button>
+              </div>
+            </div>
+          `;
+        } else if (isModerator && data.status !== 'pending') {
+          actionsHtml = `<p style="color:var(--text-light);">Заявка уже обработана. Статус: ${data.status}</p>`;
+        } else if (!isModerator && data.status === 'pending') {
+          actionsHtml = `<p style="color:var(--text-light);">Ваша заявка на рассмотрении.</p>`;
+        } else if (data.review) {
+          actionsHtml = `<div style="margin-top:20px;border-top:1px solid var(--border-color);padding-top:20px;"><h4>Анализ модератора</h4><p style="background:var(--comment-bg);padding:12px;border-radius:16px;">${data.review}</p></div>`;
+        }
+
+        container.innerHTML = `
+          <div style="background:var(--bg-card);padding:24px;border-radius:28px;box-shadow:var(--shadow);">
+            <h2>${data.name}</h2>
+            <p><strong>Описание:</strong> ${data.description}</p>
+            <p><strong>Ссылка:</strong> <a href="${data.download_url}" target="_blank">${data.download_url}</a></p>
+            <p><strong>Автор:</strong> ${data.username}</p>
+            <p><strong>Статус:</strong> ${data.status}</p>
+            ${actionsHtml}
+          </div>
+        `;
+
+        if (isModerator && data.status === 'pending') {
+          document.getElementById('approveBtn').addEventListener('click', function() {
+            document.getElementById('approveFields').style.display = 'block';
+          });
+          document.getElementById('confirmApproveBtn').addEventListener('click', async function() {
+            const pros = document.getElementById('prosInput').value.trim();
+            const cons = document.getElementById('consInput').value.trim();
+            const review = document.getElementById('reviewText').value.trim();
+            if (!pros || !cons) { showToast('Заполните плюсы и минусы', 'error'); return; }
+            try {
+              const res = await fetch(`/api/submissions/${id}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pros, cons, review })
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast('Программа одобрена и добавлена в каталог!', 'success');
+                showPage('submissions');
+                loadSubmissions();
+                loadSoftware();
+              } else showToast(data.error || 'Ошибка', 'error');
+            } catch(e) { showToast('Ошибка сервера', 'error'); }
+          });
+
+          document.getElementById('rejectBtn').addEventListener('click', async function() {
+            const review = document.getElementById('reviewText').value.trim();
+            if (!confirm('Отклонить заявку?')) return;
+            try {
+              const res = await fetch(`/api/submissions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'rejected', review })
+              });
+              const data = await res.json();
+              if (data.success) {
+                showToast('Заявка отклонена', 'info');
+                showPage('submissions');
+                loadSubmissions();
+              } else showToast(data.error, 'error');
+            } catch(e) { showToast('Ошибка сервера', 'error'); }
+          });
+        }
+      } catch(e) { console.error('Ошибка загрузки деталей заявки', e); }
+    }
+
+    document.getElementById('submitForm')?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('subName').value.trim();
+      const description = document.getElementById('subDescription').value.trim();
+      const download_url = document.getElementById('subUrl').value.trim();
+      if (!name || !description || !download_url) { showToast('Заполните все поля', 'error'); return; }
+      try {
+        const res = await fetch('/api/submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, download_url })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Заявка отправлена!', 'success');
+          document.getElementById('subName').value = '';
+          document.getElementById('subDescription').value = '';
+          document.getElementById('subUrl').value = '';
+          showPage('submissions');
+          loadSubmissions();
+        } else showToast(data.error || 'Ошибка', 'error');
+      } catch(e) { showToast('Ошибка сервера', 'error'); }
+    });
+
+    document.getElementById('suggestProgramBtn')?.addEventListener('click', function() {
+      if (!currentUser) { showToast('Войдите, чтобы предложить программу', 'error'); document.getElementById('loginBtn').click(); return; }
+      showPage('submit');
+    });
+
+    // ===== МОДАЛКИ =====
+    const loginModal = document.getElementById('loginModal');
+    const registerModal = document.getElementById('registerModal');
+    const closeLogin = document.getElementById('closeLogin');
+    const closeRegister = document.getElementById('closeRegister');
+    const switchToRegister = document.getElementById('switchToRegister');
+    const switchToLogin = document.getElementById('switchToLogin');
+
+    function openModal(modal) { modal.classList.add('active'); }
+    function closeModal(modal) { modal.classList.remove('active'); }
+
+    closeLogin.addEventListener('click', () => closeModal(loginModal));
+    closeRegister.addEventListener('click', () => closeModal(registerModal));
+    window.addEventListener('click', (e) => {
+      if (e.target === loginModal) closeModal(loginModal);
+      if (e.target === registerModal) closeModal(registerModal);
+    });
+    switchToRegister.addEventListener('click', () => { closeModal(loginModal); openModal(registerModal); });
+    switchToLogin.addEventListener('click', () => { closeModal(registerModal); openModal(loginModal); });
+
+    document.getElementById('registerSubmit').addEventListener('click', async function(e) {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+      const role = document.getElementById('regRole').value;
+      if (!username || !email || !password) { showToast('Заполните все поля', 'error'); return; }
+      try {
+        const res = await fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, email, password, role }) });
+        const data = await res.json();
+        if (data.success) {
+          await checkAuth();
+          closeModal(registerModal);
+          showToast('Регистрация успешна!', 'success');
+          loadSoftware();
+          loadTopics();
+        } else showToast(data.error || 'Ошибка регистрации', 'error');
+      } catch(e) { showToast('Ошибка сервера', 'error'); }
+    });
+
+    document.getElementById('loginSubmit').addEventListener('click', async function(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      if (!email || !password) { showToast('Заполните все поля', 'error'); return; }
+      try {
+        const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ email, password }) });
+        const data = await res.json();
+        if (data.success) {
+          await checkAuth();
+          closeModal(loginModal);
+          showToast('Вход выполнен!', 'success');
+          loadSoftware();
+          loadTopics();
+        } else showToast(data.error || 'Ошибка входа', 'error');
+      } catch(e) { showToast('Ошибка сервера', 'error'); }
+    });
+
+    // ===== СКАЧИВАНИЕ РАСШИРЕНИЯ (уже не нужно, ссылка работает) =====
+    // Убираем старый обработчик, чтобы не конфликтовал
+    // Кнопка теперь ссылка, поэтому ничего не делаем
+
+    // ===== ИНИЦИАЛИЗАЦИЯ =====
+    checkAuth();
+    loadSoftware();
+    loadTopics();
+  })();
+</script>
+</body>
+</html>

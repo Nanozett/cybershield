@@ -1,0 +1,68 @@
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
+body { width: 360px; background:#f4f7fc; color:#1e293b; }
+.popup { padding:14px; }
+
+.header { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e2e8f0; }
+.header .logo { font-size:32px; }
+.brand { font-size:18px; font-weight:800; color:#0b1a2e; }
+.version { font-size:11px; color:#94a3b8; }
+
+.status-card { display:flex; align-items:center; gap:12px; background:white; border-radius:14px; padding:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:12px; border-left:4px solid #95a5a6; }
+.status-card.safe { border-left-color:#2ecc71; }
+.status-card.suspicious { border-left-color:#f39c12; background:#fffbf0; }
+.status-card.dangerous { border-left-color:#e74c3c; background:#fff5f5; }
+.status-card.government { border-left-color:#1e40af; background:#eff6ff; }
+
+.status-icon { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:white; background:#95a5a6; flex-shrink:0; }
+.status-card.safe .status-icon { background:#2ecc71; }
+.status-card.suspicious .status-icon { background:#f39c12; }
+.status-card.dangerous .status-icon { background:#e74c3c; }
+.status-card.government .status-icon { background:#1e40af; }
+
+.status-content { flex:1; min-width:0; }
+.status-title { font-weight:700; font-size:14px; margin-bottom:2px; }
+.status-domain { font-size:12px; color:#64748b; word-break:break-all; }
+.status-reasons { font-size:11px; color:#b91c1c; margin-top:4px; }
+.status-card.government .status-reasons { color:#1e40af; }
+
+.section { background:white; border-radius:14px; padding:12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
+.section-title { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700; color:#0b1a2e; margin-bottom:10px; }
+.link-btn { background:none; border:none; color:#3b82f6; font-size:12px; cursor:pointer; font-weight:600; }
+.link-btn:hover { text-decoration:underline; }
+
+/* Блок «Год создания» */
+.creation-info { display:flex; align-items:baseline; gap:12px; padding:4px 0; }
+.creation-year { font-size:28px; font-weight:800; color:#0b1a2e; line-height:1; }
+.creation-age { font-size:13px; font-weight:600; }
+
+.password-box { display:flex; gap:6px; margin-bottom:8px; }
+.password-box input { flex:1; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-family:'Courier New',monospace; font-size:13px; background:#f8fafc; color:#1e293b; }
+.password-box button { background:#3b82f6; border:none; color:white; padding:0 12px; border-radius:10px; cursor:pointer; font-size:16px; }
+.password-box button:hover { background:#2563eb; }
+
+.password-options { font-size:12px; color:#475569; margin-bottom:8px; }
+.password-options input[type=number] { width:60px; padding:4px 6px; border:1px solid #cbd5e1; border-radius:6px; }
+
+.password-checks { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:10px; font-size:12px; color:#475569; }
+.password-checks label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+
+.btn { width:100%; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+.btn-primary { background:#3b82f6; color:white; }
+.btn-primary:hover { background:#2563eb; }
+.btn-sync { background:#0b1a2e; color:white; margin-bottom:10px; }
+.btn-sync:hover { background:#1a2e44; }
+
+.menu { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.menu button { background:#f8fafc; border:1px solid #e2e8f0; padding:8px 10px; border-radius:10px; font-size:12px; cursor:pointer; text-align:left; color:#1e293b; font-weight:600; }
+.menu button:hover { background:#3b82f6; color:white; border-color:#3b82f6; }
+
+.history { max-height:150px; overflow-y:auto; }
+.history .empty { font-size:12px; color:#94a3b8; text-align:center; padding:10px; }
+.history-item { display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; border-bottom:1px dashed #e2e8f0; }
+.history-item:last-child { border:0; }
+.history-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.history-dot.safe { background:#2ecc71; }
+.history-dot.suspicious { background:#f39c12; }
+.history-dot.dangerous { background:#e74c3c; }
+.history-dot.government { background:#1e40af; }
+.history-domain { flex:1; color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
