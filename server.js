@@ -231,7 +231,7 @@ class TursoStore extends session.Store {
 
 // ===== Middleware =====
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.set('trust proxy', 1);
 
 app.use(session({
@@ -716,6 +716,13 @@ app.delete('/api/check/history', async (req, res) => {
 ensureDBReady()
   .then(() => console.log('✅ Стартовая инициализация БД завершена'))
   .catch(err => console.error('⚠️ Стартовая инициализация БД не удалась, повторим при запросе:', err.message));
+
+// ===== SPA fallback (кроме файлов со статикой) =====
+app.get('*', (req, res, next) => {
+  // Не отдавать index.html для файлов с расширением (zip, png, css, js и т.д.)
+  if (path.extname(req.path)) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
