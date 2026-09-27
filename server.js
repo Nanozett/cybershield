@@ -657,6 +657,11 @@ app.get('/api/ssl/:domain', async (req, res) => {
   }
 });
 
+// ===== Health Check (для keep-warm) =====
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ===== WHOIS =====
 app.get('/api/whois/:domain', async (req, res) => {
   const domain = req.params.domain;
