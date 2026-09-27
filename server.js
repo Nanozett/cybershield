@@ -515,7 +515,6 @@ function extractGroupName(s) {
 }
 
 // Парсит лист XLSX и возвращает { groupName: [pairs] }
-// Строки-продолжения (без времени в B) наследуют последнее время В ПРЕДЕЛАХ ОДНОЙ ГРУППЫ.
 function parseScheduleSheet(rows) {
   const result = {};
   let currentGroup = null;
@@ -532,34 +531,33 @@ function parseScheduleSheet(rows) {
     const E = String(row[4] || '').trim();
     const F = String(row[5] || '').trim();
 
-    // 1) Заголовок группы: A заполнено, B пусто, A — не день недели
+    // 1) Заголовок группы
     if (A && !B && !DAY_ABBRS.test(A)) {
       if (/^Расписани/i.test(A)) continue;
       if (/^Курс\s+\d+/i.test(A)) continue;
       const g = extractGroupName(A);
       if (g) {
         currentGroup = g;
-        lastStart = null;   // ⚠️ сбрасываем время при смене группы
+        lastStart = null;
         lastEnd = null;
         if (!result[currentGroup]) result[currentGroup] = [];
       }
       continue;
     }
 
-    // 2) Шапка таблицы — "Время | Дисциплина | Вид | Преподаватель | Ауд."
-    //    Надёжный признак: B === "Время" ИЛИ C === "Дисциплина" ИЛИ F === "Ауд." / "Ауд"
+    // 2) Шапка таблицы
     if (
       /^Время$/i.test(B) ||
       /^Дисциплина$/i.test(C) ||
       /^Преподаватель$/i.test(E) ||
       /^Ауд\.?$/i.test(F)
     ) {
-      lastStart = null;   // ⚠️ обнуляем — следующая пара не должна унаследовать мусор
+      lastStart = null;
       lastEnd = null;
       continue;
     }
 
-    // 3) Если в строке есть время — запоминаем
+    // 3) Время в строке — запоминаем
     if (TIME_RANGE.test(B)) {
       const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
       if (tm) {
@@ -569,8 +567,8 @@ function parseScheduleSheet(rows) {
     }
 
     if (!currentGroup) continue;
-    if (!C) continue;          // пустая ячейка = окно
-    if (!lastStart) continue;  // ещё не было валидной пары с временем
+    if (!C) continue;
+    if (!lastStart) continue;
 
     result[currentGroup].push({
       pair_number: startTimeToSlot(lastStart),
@@ -584,11 +582,11 @@ function parseScheduleSheet(rows) {
   return result;
 }
 
-// ===== ЗАГРУЗКА РАСПИСАНИЯ (все группы сразу) =====
+// ===== ЗАГРУЗКА РАСПИСАНИЯ (только модераторы) =====
 app.post('/api/schedule/upload', async (req, res) => {
-  app.post('/api/schedule/upload', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Требуется авторизация' });
   if (req.session.role !== 'moderator') return res.status(403).json({ error: 'Загружать расписание может только модератор' });
+
   const { date, filename, data } = req.body;
   if (!date || !data) return res.status(400).json({ error: 'Нужны date и файл' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Дата в формате YYYY-MM-DD' });
@@ -604,7 +602,6 @@ app.post('/api/schedule/upload', async (req, res) => {
     console.log('date:', date, '| expected sheet:', dateToSheetName(date));
     console.log('sheets:', workbook.SheetNames);
 
-    // Ищем лист под дату
     const expected = dateToSheetName(date);
     let targetSheet = null;
     if (expected) {
@@ -614,8 +611,6 @@ app.post('/api/schedule/upload', async (req, res) => {
     }
     console.log('targetSheet:', targetSheet);
 
-    // Парсим: сначала выбранный лист, если нашли группы — используем только его.
-    // Если нет — все листы (fallback).
     let parsed = {};
 
     if (targetSheet) {
@@ -633,7 +628,6 @@ app.post('/api/schedule/upload', async (req, res) => {
         if (!sheet) continue;
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
         const p = parseScheduleSheet(rows);
-        // Объединяем: если группа уже есть, добавляем пары
         for (const [g, pairs] of Object.entries(p)) {
           if (!parsed[g]) parsed[g] = [];
           parsed[g] = parsed[g].concat(pairs);
@@ -654,8 +648,6 @@ app.post('/api/schedule/upload', async (req, res) => {
       });
     }
 
-    // Сохраняем: сначала удаляем старые записи для этой даты (все группы),
-    // потом вставляем всё заново. Так как файл содержит все группы — это корректно.
     await dbRun('DELETE FROM schedule WHERE date = ?', [date]);
 
     let inserted = 0;
