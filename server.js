@@ -482,11 +482,27 @@ app.post('/api/submissions/:id/approve', async (req, res) => {
 });
 
 // ===================================================================
-// ===== РАСПИСАНИЕ — новый парсер под реальную структуру XLSX =====
+// ===== РАСПИСАНИЕ — парсер v4 =====
 // ===================================================================
+console.log('🔥 SCHEDULE PARSER v4 active');
 
-// Номер пары по времени старта. Слоты: 1=08:00, 2=09:50, 3=11:40, 4=14:00, 5=15:50, 6=17:40.
-// Сдвоенные (10:40, 12:30, 14:50) округляем к ближайшему слоту.
+// Нормализует имя группы: кириллица→латиница, убирает все не-буквенно-цифровые
+// "КИТ-ОИБАС-26" → "kitoibas26"
+// "КИТ-ОИБАС-26 - 35 СТУДЕНТОВ" → "kitoibas2635studentob"
+function normalizeGroupKey(s) {
+  const map = {
+    'а':'a','б':'b','в':'b','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z',
+    'и':'i','й':'i','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+    'с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch',
+    'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
+  };
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[а-яё]/g, c => map[c] !== undefined ? map[c] : c)
+    .replace(/[^a-z0-9]/g, '');
+}
+
+// Номер пары по времени старта
 function startTimeToSlot(startTime) {
   const m = String(startTime).match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return 0;
@@ -500,7 +516,7 @@ function startTimeToSlot(startTime) {
   return best;
 }
 
-// Из даты "2026-09-26" делает имя листа "260926" (DDMMYY)
+// "2026-09-28" → "280926"
 function dateToSheetName(dateStr) {
   const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
@@ -508,13 +524,15 @@ function dateToSheetName(dateStr) {
   return `${d}${mo}${y.slice(2)}`;
 }
 
-// Парсит лист XLSX и возвращает пары только для указанной группы.
-function parseScheduleRows(rows, targetGroup) {
+// Парсит лист XLSX и возвращает пары для указанной группы
+function parseScheduleRows(rows, targetGroupRaw) {
+  const target = normalizeGroupKey(targetGroupRaw);
+  if (!target) return [];
+
   const pairs = [];
   let collecting = false;
   const DAY_ABBRS = /^(СБ|ПН|ВТ|СР|ЧТ|ПТ|ВС)$/i;
   const TIME_RANGE = /^\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}$/;
-  const target = targetGroup ? String(targetGroup).toLowerCase().trim() : null;
 
   for (const row of rows) {
     if (!row) continue;
@@ -524,25 +542,22 @@ function parseScheduleRows(rows, targetGroup) {
     const E = String(row[4] || '').trim();
     const F = String(row[5] || '').trim();
 
-    // Строки, где A заполнена, а B пуста — заголовки/маркеры
+    // Строка-заголовок секции: колонка A заполнена, B пуста, A — не день недели
     if (A && !B && !DAY_ABBRS.test(A)) {
-      if (/^Расписани/i.test(A)) continue;      // "Расписания учебных занятий ..."
-      if (/^Курс\s+\d+/i.test(A)) continue;      // "Курс 2", "Курс 3"
-      if (!target) continue;
-      // Проверяем: начинается ли строка с выбранной группы
-      if (A.toLowerCase().startsWith(target)) {
+      if (/^Расписани/i.test(A)) continue;
+      if (/^Курс\s+\d+/i.test(A)) continue;
+      const aKey = normalizeGroupKey(A);
+      if (aKey.startsWith(target)) {
         collecting = true;
       } else if (/СТУДЕНТ/i.test(A)) {
-        // Другая группа началась — прекращаем сбор
         collecting = false;
       }
       continue;
     }
 
-    // Строка с парой: B = "08:00-09:35"
     if (!TIME_RANGE.test(B)) continue;
     if (!collecting) continue;
-    if (!C) continue; // пустая дисциплина (окно) — пропускаем
+    if (!C) continue;
 
     const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
     if (!tm) continue;
@@ -574,49 +589,80 @@ app.post('/api/schedule/upload', async (req, res) => {
     if (buffer.length < 100) return res.status(400).json({ error: 'Файл пустой или повреждён' });
 
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    console.log('📄 Листы XLSX:', workbook.SheetNames);
-    console.log('📌 Ищем группу:', group, '| Дата:', date);
+    console.log('=== XLSX UPLOAD ===');
+    console.log('group:', JSON.stringify(group), '| normalized:', normalizeGroupKey(group));
+    console.log('date:', date, '| expected sheet:', dateToSheetName(date));
+    console.log('sheets:', workbook.SheetNames);
 
-    // Пытаемся найти лист под нужную дату (имя вида "260926")
     const expected = dateToSheetName(date);
     let targetSheet = null;
     if (expected) {
-      targetSheet = workbook.SheetNames.find(s => s === expected)
-        || workbook.SheetNames.find(s => s.includes(expected))
-        || workbook.SheetNames.find(s => s.replace(/\D/g, '') === expected);
+      targetSheet = workbook.SheetNames.find(s => String(s).trim() === expected)
+        || workbook.SheetNames.find(s => String(s).includes(expected))
+        || workbook.SheetNames.find(s => String(s).replace(/\D/g, '') === expected);
     }
-    const sheetsToParse = targetSheet ? [targetSheet] : workbook.SheetNames;
-    console.log('📄 Парсим листы:', sheetsToParse, targetSheet ? '(точное совпадение по дате ✅)' : '(дата не найдена в именах листов — парсим все ⚠️)');
+    console.log('targetSheet:', targetSheet);
 
     let allPairs = [];
-    for (const sheetName of sheetsToParse) {
-      const sheet = workbook.Sheets[sheetName];
-      if (!sheet) continue;
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const pairs = parseScheduleRows(rows, group);
-      if (pairs.length > 0) console.log(`  ✅ Лист ${sheetName}: ${pairs.length} пар для ${group}`);
-      else console.log(`  ⚠️ Лист ${sheetName}: пар для ${group} не найдено`);
-      allPairs = allPairs.concat(pairs);
+
+    // Сначала пробуем только лист по дате
+    if (targetSheet) {
+      const sheet = workbook.Sheets[targetSheet];
+      if (sheet) {
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        allPairs = parseScheduleRows(rows, group);
+        console.log(`  sheet ${targetSheet}: ${allPairs.length} пар`);
+      }
+    }
+
+    // Если пусто — идём по всем листам (fallback)
+    if (allPairs.length === 0) {
+      console.log('  fallback: парсим все листы');
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) continue;
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        const pairs = parseScheduleRows(rows, group);
+        if (pairs.length > 0) console.log(`  sheet ${sheetName}: ${pairs.length} пар`);
+        allPairs = allPairs.concat(pairs);
+      }
     }
 
     if (allPairs.length === 0) {
+      // Собираем список всех групп из файла для подсказки
+      const groupsInFile = new Set();
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) continue;
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        for (const row of rows) {
+          if (!row) continue;
+          const A = String(row[0] || '').trim();
+          if (A && /СТУДЕНТ/i.test(A)) {
+            const g = A.replace(/\s*-\s*\d+\s*СТУДЕНТ.*/i, '').trim();
+            if (g) groupsInFile.add(g);
+          }
+        }
+      }
+      console.log('groups in file:', Array.from(groupsInFile));
       return res.status(400).json({
-        error: `В файле не найдена группа «${group}» на дату ${date}. Листы в файле: ${workbook.SheetNames.join(', ')}. Проверь, что группа в расписании написана так же, как в списке (например «КИТ-ОИБАС-26»).`
+        error: `Группа «${group}» не найдена в файле на дату ${date}.`,
+        sheets: workbook.SheetNames,
+        groupsInFile: Array.from(groupsInFile).slice(0, 60)
       });
     }
 
-    // Перезаписываем расписание для этой группы/даты
+    // Перезапись
     await dbRun('DELETE FROM schedule WHERE group_name = ? AND date = ?', [group, date]);
-
     for (const p of allPairs) {
       await dbRun(
         'INSERT INTO schedule (group_name, date, pair_number, subject, teacher, room, start_time, end_time, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [group, date, p.pair_number, p.subject, p.teacher, p.room, p.start_time, p.end_time, req.session.userId]
       );
     }
-
     await dbRun('INSERT OR IGNORE INTO groups_list (name) VALUES (?)', [group]);
 
+    console.log(`✅ Сохранено ${allPairs.length} пар для ${group} на ${date}`);
     res.json({ success: true, saved: allPairs.length, group, date, filename: filename || null });
   } catch (e) {
     console.error('Ошибка загрузки расписания:', e);
@@ -638,6 +684,44 @@ app.get('/api/schedule/dates', async (req, res) => {
     const rows = await dbAll('SELECT DISTINCT date FROM schedule WHERE group_name = ? ORDER BY date DESC LIMIT 30', [group]);
     res.json(rows.map(r => r.date));
   } catch { res.status(500).json({ error: 'Ошибка сервера' }); }
+});
+
+// ===== ОТЛАДКА =====
+// /api/schedule/debug — что реально лежит в БД
+app.get('/api/schedule/debug', async (req, res) => {
+  try {
+    const rows = await dbAll(`
+      SELECT group_name, date, COUNT(*) as cnt
+      FROM schedule
+      GROUP BY group_name, date
+      ORDER BY date DESC, group_name
+      LIMIT 200
+    `);
+    res.json({
+      totalGroups: new Set(rows.map(r => r.group_name)).size,
+      totalEntries: rows.length,
+      entries: rows.map(r => ({ group: r.group_name, date: r.date, pairs: Number(r.cnt) }))
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// /api/schedule/debug/:group/:date — точное содержимое
+app.get('/api/schedule/debug/:group/:date', async (req, res) => {
+  try {
+    const rows = await dbAll(
+      'SELECT * FROM schedule WHERE group_name = ? AND date = ? ORDER BY pair_number, start_time',
+      [req.params.group, req.params.date]
+    );
+    res.json({ group: req.params.group, date: req.params.date, count: rows.length, rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// /api/schedule/groups-in-db — просто список групп в БД (без дат)
+app.get('/api/schedule/groups-in-db', async (req, res) => {
+  try {
+    const rows = await dbAll('SELECT DISTINCT group_name FROM schedule ORDER BY group_name');
+    res.json(rows.map(r => r.group_name));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/schedule', async (req, res) => {
