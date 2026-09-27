@@ -735,13 +735,15 @@
           <option value="">Выберите группу</option>
         </select>
         <input type="date" id="scheduleDate" class="schedule-input">
+        <select id="scheduleSubgroup" class="schedule-input" style="min-width:150px;">
+          <option value="all">Все подгруппы</option>
+          <option value="1">1 подгруппа</option>
+          <option value="2">2 подгруппа</option>
+        </select>
         <button id="scheduleLoadBtn" class="schedule-btn">📅 Показать</button>
         <button id="scheduleTodayBtn" class="schedule-btn secondary">Сегодня</button>
         <button id="scheduleUploadBtn" class="schedule-btn secondary" style="margin-left:auto;">📤 Загрузить расписание</button>
       </div>
-      <div id="scheduleContent"></div>
-    </div>
-  </div>
 
    <!-- ЗАГРУЗКА РАСПИСАНИЯ -->
   <div class="page" id="page-upload">
@@ -1558,6 +1560,7 @@
 
     // ===== РАСПИСАНИЕ =====
     let scheduleGroupsLoaded = false;
+    let lastScheduleData = null;
 
     async function initSchedulePage() {
       if (!scheduleGroupsLoaded) {
@@ -1572,6 +1575,9 @@
       }
 
       document.getElementById('scheduleLoadBtn').onclick = loadSchedule;
+            document.getElementById('scheduleSubgroup').onchange = () => {
+        if (lastScheduleData) renderSchedule(lastScheduleData);
+      };
       document.getElementById('scheduleTodayBtn').onclick = () => {
         dateInput.value = new Date().toISOString().slice(0, 10);
         loadSchedule();
@@ -1593,6 +1599,7 @@
       if (!group) return showToast('Выберите группу', 'error');
       if (!date) return showToast('Выберите дату', 'error');
 
+            lastScheduleData = null;
       container.innerHTML = '<div class="empty-day"><div class="empty-day-text">⏳ Загрузка...</div></div>';
 
       try {
@@ -1612,6 +1619,7 @@
           return;
         }
 
+        lastScheduleData = data;
         renderSchedule(data);
       } catch (e) {
         console.error('Ошибка загрузки', e);
@@ -1624,8 +1632,22 @@
       }
     }
 
+    // Фильтрация пар по подгруппе (1пг / 2пг)
+    function filterPairsBySubgroup(pairs, subgroup) {
+      if (!subgroup || subgroup === 'all') return pairs;
+      const marker = subgroup + 'пг'; // "1пг" или "2пг"
+      return pairs.filter(p => {
+        const subj = String(p.subject || '');
+        const hasAnySub = /[12]пг/i.test(subj);
+        if (!hasAnySub) return true; // пары без маркера — общие, показываем всем
+        return subj.toLowerCase().includes(marker.toLowerCase());
+      });
+    }
+
     function renderSchedule(data) {
       const container = document.getElementById('scheduleContent');
+      const subgroupEl = document.getElementById('scheduleSubgroup');
+      const subgroup = subgroupEl ? subgroupEl.value : 'all';
 
       const dayName = data.dayName || '—';
       const group = data.group || '—';
@@ -1634,44 +1656,59 @@
         if (data.date) dateStr = new Date(data.date).toLocaleDateString('ru-RU');
       } catch (e) {}
 
-      const pairs = Array.isArray(data.pairs) ? data.pairs : [];
+      const allPairs = Array.isArray(data.pairs) ? data.pairs : [];
+      const pairs = filterPairsBySubgroup(allPairs, subgroup);
+
+      const subLabel = subgroup === 'all' ? '' : ` • ${subgroup} подгруппа`;
 
       if (pairs.length === 0) {
         container.innerHTML = `
           <div class="schedule-day-header">
             <div>
               <div class="schedule-day-title">${escapeHtml(dayName)}</div>
-              <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}</div>
+              <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}${subLabel}</div>
             </div>
             <div class="schedule-day-count">Пар нет</div>
           </div>
           <div class="empty-day">
             <div class="empty-day-icon">🎉</div>
-            <div class="empty-day-text">В этот день пар нет — можно отдохнуть!<br><small style="opacity:0.7;">Возможно, расписание ещё не загружено.</small></div>
+            <div class="empty-day-text">В этот день пар нет — можно отдохнуть!<br>
+              <small style="opacity:0.7;">${subgroup === 'all' ? 'Возможно, расписание ещё не загружено.' : 'Попробуй выбрать другую подгруппу.'}</small>
+            </div>
           </div>
         `;
         return;
       }
 
-      const pairsHtml = pairs.map(p => `
-        <div class="pair-card">
-          <div class="pair-number">${p.pair_number || '—'}</div>
-          <div class="pair-info">
-            <div class="pair-subject">${escapeHtml(p.subject || '—')}</div>
-            <div class="pair-details">
-              <span>👤 ${escapeHtml(p.teacher || '—')}</span>
-              <span>🚪 Ауд. ${escapeHtml(p.room || '—')}</span>
+      const pairsHtml = pairs.map(p => {
+        // Бейдж подгруппы, если в названии предмета есть "1пг" или "2пг"
+        let badge = '';
+        const subj = String(p.subject || '');
+        if (/1пг/i.test(subj)) {
+          badge = '<span style="background:#dbeafe;color:#1e4a8a;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-left:8px;white-space:nowrap;">1пг</span>';
+        } else if (/2пг/i.test(subj)) {
+          badge = '<span style="background:#fce7f3;color:#9d174d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-left:8px;white-space:nowrap;">2пг</span>';
+        }
+        return `
+          <div class="pair-card">
+            <div class="pair-number">${p.pair_number || '—'}</div>
+            <div class="pair-info">
+              <div class="pair-subject">${escapeHtml(p.subject || '—')}${badge}</div>
+              <div class="pair-details">
+                <span>👤 ${escapeHtml(p.teacher || '—')}</span>
+                <span>🚪 Ауд. ${escapeHtml(p.room || '—')}</span>
+              </div>
             </div>
+            <div class="pair-time">${escapeHtml(p.start_time || '—')} — ${escapeHtml(p.end_time || '—')}</div>
           </div>
-          <div class="pair-time">${escapeHtml(p.start_time || '—')} — ${escapeHtml(p.end_time || '—')}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       container.innerHTML = `
         <div class="schedule-day-header">
           <div>
             <div class="schedule-day-title">${escapeHtml(dayName)}</div>
-            <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}</div>
+            <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}${subLabel}</div>
           </div>
           <div class="schedule-day-count">${pairs.length} ${declOfNum(pairs.length, ['пара', 'пары', 'пар'])}</div>
         </div>
