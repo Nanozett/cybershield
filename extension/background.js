@@ -14,7 +14,7 @@ const GOVERNMENT_SITES = [
   'duma.gov.ru', 'cikrf.ru', 'mchs.gov.ru'
 ];
 
-// ===== ЛОКАЛЬНЫЕ АДРЕСА (наши и свои проекты) =====
+// ===== ЛОКАЛЬНЫЕ АДРЕСА =====
 const LOCAL_SITES = [
   'localhost',
   '127.0.0.1',
@@ -22,15 +22,115 @@ const LOCAL_SITES = [
   '::1'
 ];
 
+// ===== ЧЁРНЫЙ СПИСОК =====
 const BLACKLIST = [
   'phishing-example.com', 'malware-site.ru', 'free-vbucks.net',
-  'steam-communlty.com', 'sberbank-online-vhod.ru'
+  'steam-communlty.com', 'sberbank-online-vhod.ru',
+  // Примеры обнаруженных фишингов
+  'casebatle.id', 'casbatle.com', 'casebattle.red',
+  'case-batlte.com', 'cases-batle.ru'
 ];
 
+// ===== ПОДОЗРИТЕЛЬНЫЕ ПАТТЕРНЫ =====
 const SUSPICIOUS_PATTERNS = [
   'free-money', 'login-verify', 'account-confirm',
   'paypal-secure', 'sberbank-online', 'gosuslugi-vhod'
 ];
+
+// ===== ЛЕГИТИМНЫЕ БРЕНДЫ (за которые выдают себя мошенники) =====
+// Добавляй сюда все популярные сервисы, которые часто копируют.
+const LEGITIMATE_BRANDS = [
+  'case-battle.lat',
+  'case-battle.cfd',
+  'steamcommunity.com',
+  'sberbank.ru',
+  'gosuslugi.ru',
+  'vk.com',
+  'yandex.ru',
+  'mail.ru',
+  'avito.ru',
+  'ozon.ru',
+  'wildberries.ru',
+  'tinkoff.ru',
+  'alfabank.ru'
+];
+
+// ===== НОРМАЛИЗАЦИЯ ДОМЕНА =====
+// Убирает дефисы, точки, приводит кириллические похожие символы к латинице.
+function normalizeDomain(name) {
+  let s = String(name).toLowerCase();
+  // Заменяем кириллические похожие на латинские
+  const homoglyphs = {
+    'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c',
+    'х': 'x', 'у': 'y', 'к': 'k', 'в': 'b', 'н': 'h',
+    'м': 'm', 'т': 't', 'і': 'i', 'ї': 'i', 'ё': 'e',
+    'ѕ': 's', 'ј': 'j', 'ԁ': 'd'
+  };
+  s = s.split('').map(c => homoglyphs[c] || c).join('');
+  // Убираем дефисы и подчёркивания
+  s = s.replace(/[-_]/g, '');
+  return s;
+}
+
+// ===== РАССТОЯНИЕ ЛЕВЕНШТЕЙНА =====
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // замена
+          matrix[i][j - 1] + 1,     // вставка
+          matrix[i - 1][j] + 1      // удаление
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+// ===== ПОИСК ДОМЕНА-ДВОЙНИКА =====
+// Ищет в LEGITIMATE_BRANDS домен, на который похож входной.
+// Возвращает { lookalike, distance } или null.
+function findLookalike(domain) {
+  // Отрезаем TLD: "casebatle.id" → "casebatle"
+  const cleanDomain = String(domain).toLowerCase().replace(/^www\./, '').split('.')[0];
+  const normalizedInput = normalizeDomain(cleanDomain);
+
+  let bestMatch = null;
+
+  for (const brand of LEGITIMATE_BRANDS) {
+    const cleanBrand = String(brand).toLowerCase().replace(/^www\./, '').split('.')[0];
+    const normalizedBrand = normalizeDomain(cleanBrand);
+
+    // Точное совпадение — не двойник, а сам бренд (или совпал случайно). Пропускаем.
+    if (normalizedInput === normalizedBrand) continue;
+
+    // Слишком короткие имена — шум (например, "vk")
+    if (normalizedBrand.length < 4) continue;
+
+    const distance = levenshtein(normalizedInput, normalizedBrand);
+
+    if (!bestMatch || distance < bestMatch.distance) {
+      bestMatch = { lookalike: brand, distance };
+    }
+  }
+
+  // Порог: <=2 символов — домен двойник
+  if (bestMatch && bestMatch.distance <= 2) {
+    return bestMatch;
+  }
+  return null;
+}
 
 // ===== Установка =====
 chrome.runtime.onInstalled.addListener(() => {
@@ -70,27 +170,30 @@ function isGovernmentSite(domain) {
 // ===== Проверка на локальный адрес =====
 function isLocalSite(domain) {
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
-  // Прямое совпадение с известными локальными
   if (LOCAL_SITES.includes(cleanDomain)) return true;
-  // localhost:3000 → domain = "localhost", порт отсекается парсером
-  // 192.168.x.x и 10.x.x.x — приватные
   if (/^192\.168\.\d+\.\d+$/.test(cleanDomain)) return true;
   if (/^10\.\d+\.\d+\.\d+$/.test(cleanDomain)) return true;
   if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(cleanDomain)) return true;
-  // .local, .test, .localhost — зарезервированные
   if (cleanDomain.endsWith('.local') || cleanDomain.endsWith('.test') || cleanDomain.endsWith('.localhost')) return true;
   return false;
 }
 
+// ===== Проверка, не является ли домен одним из легитимных (для whitelist) =====
+function isLegitimateBrand(domain) {
+  const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
+  return LEGITIMATE_BRANDS.some(brand => {
+    const cleanBrand = brand.toLowerCase().replace(/^www\./, '');
+    return cleanDomain === cleanBrand || cleanDomain.endsWith('.' + cleanBrand);
+  });
+}
+
 // ===== Получение года создания домена через сервер =====
 async function getDomainCreationDate(domain) {
-  // Локальные адреса не проверяем через RDAP
   if (isLocalSite(domain)) {
     console.log('[КиберЩит] Локальный адрес, WHOIS пропускаем:', domain);
     return null;
   }
 
-  // Способ 1: через сервер (надёжно)
   try {
     const res = await fetch(`${SERVER_URL}/api/whois/${domain}`, {
       method: 'GET',
@@ -114,7 +217,6 @@ async function getDomainCreationDate(domain) {
     console.warn('[КиберЩит] Сервер недоступен:', e.message);
   }
 
-  // Способ 2: напрямую через rdap.org (запасной)
   try {
     const res = await fetch(`https://rdap.org/domain/${domain}`, {
       method: 'GET',
@@ -164,7 +266,7 @@ async function checkUrl(url, tabId) {
     // Получаем дату создания домена
     const creationInfo = await getDomainCreationDate(domain);
 
-    // 1. Госсайты — особый случай
+    // 1. Госсайты
     if (isGovernmentSite(domain)) {
       verdict = 'government';
       reasons.push('Официальный сайт государственного органа РФ');
@@ -185,19 +287,36 @@ async function checkUrl(url, tabId) {
       reasons.push('Домен в чёрном списке КиберЩит');
     }
 
-    // 3. Подозрительные паттерны
+    // 3. Легитимный бренд — не проверяем дальше на двойника
+    const isLegit = isLegitimateBrand(domain);
+
+    // 4. НОВОЕ: Проверка на домен-двойник
+    if (!isLegit && verdict !== 'dangerous') {
+      const lookalike = findLookalike(domain);
+      if (lookalike) {
+        if (lookalike.distance <= 1) {
+          verdict = 'dangerous';
+          reasons.push(`Домен-двойник официального сайта «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+        } else {
+          if (verdict === 'safe') verdict = 'suspicious';
+          reasons.push(`Домен похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+        }
+      }
+    }
+
+    // 5. Подозрительные паттерны
     if (SUSPICIOUS_PATTERNS.some(p => domain.toLowerCase().includes(p))) {
       if (verdict === 'safe') verdict = 'suspicious';
       reasons.push('Подозрительное имя домена');
     }
 
-    // 4. HTTPS
+    // 6. HTTPS
     if (url.startsWith('http://')) {
       if (verdict === 'safe') verdict = 'suspicious';
       reasons.push('Соединение без HTTPS');
     }
 
-    // 5. Возраст домена
+    // 7. Возраст домена
     if (creationInfo && creationInfo.fullDate) {
       const regDate = new Date(creationInfo.fullDate);
       const ageDays = Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -207,7 +326,7 @@ async function checkUrl(url, tabId) {
       }
     }
 
-    // 6. Запрос к серверу КиберЩит
+    // 8. Запрос к серверу КиберЩит (там тоже продублирована проверка на двойника)
     try {
       const res = await fetch(`${SERVER_URL}/api/check`, {
         method: 'POST',
@@ -217,11 +336,18 @@ async function checkUrl(url, tabId) {
       if (res.ok) {
         const data = await res.json();
         if (data.verdict && data.verdict !== 'safe') {
-          verdict = data.verdict;
+          // Берём более строгий вердикт
+          const rank = { safe: 0, government: 1, suspicious: 2, dangerous: 3 };
+          if ((rank[data.verdict] || 0) > (rank[verdict] || 0)) {
+            verdict = data.verdict;
+          }
           if (data.reasons) reasons = reasons.concat(data.reasons);
         }
       }
     } catch (e) { /* сервер недоступен */ }
+
+    // Убираем дубликаты из reasons
+    reasons = [...new Set(reasons)];
 
     updateBadge(tabId, verdict);
     saveToHistory({ url, domain, verdict, reasons, time: Date.now(), creationInfo });

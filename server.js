@@ -155,12 +155,10 @@ async function initDB() {
 }
 
 // ===== Гарантия инициализации БД =====
-// Возвращает промис, который резолвится, когда все таблицы точно созданы.
 let dbInitPromise = null;
 function ensureDBReady() {
   if (!dbInitPromise) {
     dbInitPromise = initDB().catch(err => {
-      // Сбрасываем промис, чтобы следующий запрос попробовал снова
       dbInitPromise = null;
       throw err;
     });
@@ -245,6 +243,93 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24
   }
 }));
+
+// ===== ЛЕГИТИМНЫЕ БРЕНДЫ (глобально) =====
+const LEGITIMATE_BRANDS = [
+  'case-battle.lat',
+  'case-battle.cfd',
+  'steamcommunity.com',
+  'sberbank.ru',
+  'gosuslugi.ru',
+  'vk.com',
+  'yandex.ru',
+  'mail.ru',
+  'avito.ru',
+  'ozon.ru',
+  'wildberries.ru',
+  'tinkoff.ru',
+  'alfabank.ru'
+];
+
+// ===== Нормализация домена (гомоглифы, дефисы) =====
+function normalizeDomain(name) {
+  let s = String(name).toLowerCase();
+  const homoglyphs = {
+    'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c',
+    'х': 'x', 'у': 'y', 'к': 'k', 'в': 'b', 'н': 'h',
+    'м': 'm', 'т': 't', 'і': 'i', 'ї': 'i', 'ё': 'e',
+    'ѕ': 's', 'ј': 'j', 'ԁ': 'd'
+  };
+  s = s.split('').map(c => homoglyphs[c] || c).join('');
+  s = s.replace(/[-_]/g, '');
+  return s;
+}
+
+// ===== Расстояние Левенштейна =====
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+// ===== Поиск домена-двойника =====
+function findLookalike(domain) {
+  const cleanDomain = String(domain).toLowerCase().replace(/^www\./, '').split('.')[0];
+  const normalizedInput = normalizeDomain(cleanDomain);
+
+  let bestMatch = null;
+  for (const brand of LEGITIMATE_BRANDS) {
+    const cleanBrand = String(brand).toLowerCase().replace(/^www\./, '').split('.')[0];
+    const normalizedBrand = normalizeDomain(cleanBrand);
+    if (normalizedInput === normalizedBrand) continue;
+    if (normalizedBrand.length < 4) continue;
+
+    const distance = levenshtein(normalizedInput, normalizedBrand);
+    if (!bestMatch || distance < bestMatch.distance) {
+      bestMatch = { lookalike: brand, distance };
+    }
+  }
+  if (bestMatch && bestMatch.distance <= 2) return bestMatch;
+  return null;
+}
+
+// ===== Проверка, легитимный ли домен =====
+function isLegitimateBrand(domain) {
+  const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
+  return LEGITIMATE_BRANDS.some(brand => {
+    const cleanBrand = brand.toLowerCase().replace(/^www\./, '');
+    return cleanDomain === cleanBrand || cleanDomain.endsWith('.' + cleanBrand);
+  });
+}
 
 // ===== АВТОРИЗАЦИЯ =====
 app.post('/api/register', async (req, res) => {
@@ -629,6 +714,7 @@ app.get('/api/whois/:domain', async (req, res) => {
 app.post('/api/check', (req, res) => {
   const { url, domain } = req.body;
   if (!url || !domain) return res.status(400).json({ error: 'Не указан URL' });
+
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   const LOCAL_SITES = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
   const isLocal =
@@ -653,22 +739,45 @@ app.post('/api/check', (req, res) => {
 
   let verdict = 'safe';
   const reasons = [];
-  const BLACKLIST = ['phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru'];
-  const SUSPICIOUS_PATTERNS = ['free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'];
+
+  const BLACKLIST = [
+    'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
+    'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru'
+  ];
+  const SUSPICIOUS_PATTERNS = [
+    'free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'
+  ];
 
   if (BLACKLIST.some(b => cleanDomain.includes(b))) {
     verdict = 'dangerous';
     reasons.push('Домен в чёрном списке КиберЩит');
   }
+
+  // ===== Проверка на двойника (если домен ещё не опасен и не сам бренд) =====
+  if (verdict !== 'dangerous' && !isLegitimateBrand(cleanDomain)) {
+    const lookalike = findLookalike(cleanDomain);
+    if (lookalike) {
+      if (lookalike.distance <= 1) {
+        verdict = 'dangerous';
+        reasons.push(`Домен-двойник официального сайта «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+      } else {
+        if (verdict === 'safe') verdict = 'suspicious';
+        reasons.push(`Домен похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+      }
+    }
+  }
+
   if (SUSPICIOUS_PATTERNS.some(p => cleanDomain.includes(p))) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Подозрительное имя домена');
   }
+
   if (url.startsWith('http://')) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Соединение без HTTPS');
   }
-  res.json({ verdict, reasons });
+
+  res.json({ verdict, reasons: [...new Set(reasons)] });
 });
 
 // ===== СИНХРОНИЗАЦИЯ =====
@@ -710,19 +819,16 @@ app.delete('/api/check/history', async (req, res) => {
   }
 });
 
-// ===== Запуск =====
-// Запускаем инициализацию БД сразу, чтобы к первому запросу таблицы уже были готовы.
-// Если что-то пойдёт не так — TursoStore повторит попытку в рамках ensureDBReady().
-ensureDBReady()
-  .then(() => console.log('✅ Стартовая инициализация БД завершена'))
-  .catch(err => console.error('⚠️ Стартовая инициализация БД не удалась, повторим при запросе:', err.message));
-
 // ===== SPA fallback (кроме файлов со статикой) =====
 app.get('*', (req, res, next) => {
-  // Не отдавать index.html для файлов с расширением (zip, png, css, js и т.д.)
   if (path.extname(req.path)) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// ===== Запуск =====
+ensureDBReady()
+  .then(() => console.log('✅ Стартовая инициализация БД завершена'))
+  .catch(err => console.error('⚠️ Стартовая инициализация БД не удалась, повторим при запросе:', err.message));
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
