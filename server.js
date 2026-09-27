@@ -515,7 +515,7 @@ function extractGroupName(s) {
 }
 
 // Парсит лист XLSX и возвращает { groupName: [pairs] }
-// Важно: строки-продолжения (та же пара, но без времени в колонке B) наследуют последнее время.
+// Строки-продолжения (без времени в B) наследуют последнее время В ПРЕДЕЛАХ ОДНОЙ ГРУППЫ.
 function parseScheduleSheet(rows) {
   const result = {};
   let currentGroup = null;
@@ -532,19 +532,34 @@ function parseScheduleSheet(rows) {
     const E = String(row[4] || '').trim();
     const F = String(row[5] || '').trim();
 
-    // Заголовок группы: A заполнено, B пусто, A — не день недели
+    // 1) Заголовок группы: A заполнено, B пусто, A — не день недели
     if (A && !B && !DAY_ABBRS.test(A)) {
       if (/^Расписани/i.test(A)) continue;
       if (/^Курс\s+\d+/i.test(A)) continue;
       const g = extractGroupName(A);
       if (g) {
         currentGroup = g;
+        lastStart = null;   // ⚠️ сбрасываем время при смене группы
+        lastEnd = null;
         if (!result[currentGroup]) result[currentGroup] = [];
       }
       continue;
     }
 
-    // Если в строке есть время — запоминаем
+    // 2) Шапка таблицы — "Время | Дисциплина | Вид | Преподаватель | Ауд."
+    //    Надёжный признак: B === "Время" ИЛИ C === "Дисциплина" ИЛИ F === "Ауд." / "Ауд"
+    if (
+      /^Время$/i.test(B) ||
+      /^Дисциплина$/i.test(C) ||
+      /^Преподаватель$/i.test(E) ||
+      /^Ауд\.?$/i.test(F)
+    ) {
+      lastStart = null;   // ⚠️ обнуляем — следующая пара не должна унаследовать мусор
+      lastEnd = null;
+      continue;
+    }
+
+    // 3) Если в строке есть время — запоминаем
     if (TIME_RANGE.test(B)) {
       const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
       if (tm) {
@@ -554,8 +569,8 @@ function parseScheduleSheet(rows) {
     }
 
     if (!currentGroup) continue;
-    if (!C) continue;          // пустая ячейка/окно
-    if (!lastStart) continue;  // ещё не было ни одной пары с временем
+    if (!C) continue;          // пустая ячейка = окно
+    if (!lastStart) continue;  // ещё не было валидной пары с временем
 
     result[currentGroup].push({
       pair_number: startTimeToSlot(lastStart),
