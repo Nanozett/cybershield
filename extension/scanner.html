@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>КиберЩит — Сканер безопасности браузера</title>
+  <link rel="stylesheet" href="scanner.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔍 Сканер безопасности браузера</h1>
+      <p class="subtitle">Проверяем настройки вашего Chrome</p>
+    </header>
+
+    <div class="score-block">
+      <div class="score-circle" id="scoreCircle">
+        <div class="score-inner">
+          <div class="score-num" id="scoreNum">—</div>
+          <div class="score-label">из 100</div>
+        </div>
+      </div>
+      <div class="score-verdict" id="scoreVerdict">Сканируем...</div>
+      <button class="btn-refresh" id="refreshBtn">🔄 Пересканировать</button>
+    </div>
+
+    <div id="checksContainer">
+      <div class="loading">⏳ Собираем данные о браузере...</div>
+    </div>
+
+    <footer>
+      <p>КиберЩит v4.5 — расширение проверяет только настройки браузера. Мы не собираем ваши данные.</p>
+    </footer>
+  </div>
+  <script src="scanner.js"></script>
+</body>
+</html>

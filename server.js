@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const tls = require('tls');
 const { createClient } = require('@libsql/client');
 
 const app = express();
@@ -239,6 +240,30 @@ const LEGITIMATE_BRANDS = [
   'tinkoff.ru', 'alfabank.ru'
 ];
 
+// ===== Динамические платформы (часто используются мошенниками) =====
+const DYNAMIC_HOSTING_PLATFORMS = [
+  'jugem.jp',
+  'blogspot.com', 'blogspot.nl', 'blogspot.ru', 'blogspot.de', 'blogspot.co.uk',
+  'weebly.com',
+  'livejournal.com',
+  'ucoz.com', 'ucoz.ru',
+  'homelinux.org',
+  'freedomain.thehost.com.ua',
+  'byethost.com', 'byethost16.com', 'byethost7.com',
+  '000webhostapp.com',
+  'herokuapp.com',
+  'github.io',
+  'netlify.app',
+  'pages.dev',
+  'glitch.me',
+  'repl.co'
+];
+
+// ===== Подозрительные TLD =====
+const SUSPICIOUS_TLDS = [
+  'icu', 'top', 'gq', 'ml', 'tk', 'cf', 'ga', 'click'
+];
+
 // ===== Нормализация домена =====
 function normalizeDomain(name) {
   let s = String(name).toLowerCase();
@@ -286,6 +311,34 @@ function isLegitimateBrand(domain) {
     const cleanBrand = brand.toLowerCase().replace(/^www\./, '');
     return cleanDomain === cleanBrand || cleanDomain.endsWith('.' + cleanBrand);
   });
+}
+
+// ===== НОВОЕ: Детект рандомного поддомена на бесплатной платформе =====
+function isDynamicPhishing(domain) {
+  const clean = domain.toLowerCase().replace(/^www\./, '');
+  for (const platform of DYNAMIC_HOSTING_PLATFORMS) {
+    if (clean.endsWith('.' + platform)) {
+      const subdomain = clean.slice(0, -(platform.length + 1));
+      // 1) Чисто буквенно-цифровая строка 4–20 символов с цифрами — рандом
+      if (/^[a-z0-9]{4,20}$/.test(subdomain) && /\d/.test(subdomain)) {
+        if (!/(my|blog|test|dev|photo|travel|food|news|life|shop|site|home)/i.test(subdomain)) {
+          return { platform, subdomain, reason: 'Рандомный поддомен на бесплатной платформе' };
+        }
+      }
+      // 2) Длинный поддомен (> 20 символов) — тоже часто рандом
+      if (subdomain.length > 20) {
+        return { platform, subdomain, reason: 'Подозрительно длинный поддомен' };
+      }
+    }
+  }
+  return null;
+}
+
+// ===== НОВОЕ: Проверка TLD =====
+function hasSuspiciousTLD(domain) {
+  const parts = domain.toLowerCase().split('.');
+  const tld = parts[parts.length - 1];
+  return SUSPICIOUS_TLDS.includes(tld);
 }
 
 // ===== АВТОРИЗАЦИЯ =====
@@ -529,6 +582,81 @@ app.post('/api/submissions/:id/approve', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
+// ===== SSL-сертификат =====
+function getSslCert(domain) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const socket = tls.connect({
+      host: domain,
+      port: 443,
+      servername: domain,
+      rejectUnauthorized: false,
+      timeout: 6000,
+    }, () => {
+      if (finished) return;
+      finished = true;
+      try {
+        const cert = socket.getPeerCertificate();
+        socket.end();
+        if (!cert || !cert.subject || Object.keys(cert).length === 0) {
+          return reject(new Error('Не удалось получить сертификат'));
+        }
+
+        const now = Date.now();
+        const validFromTs = cert.valid_from ? new Date(cert.valid_from).getTime() : 0;
+        const validToTs = cert.valid_to ? new Date(cert.valid_to).getTime() : 0;
+        const daysLeft = validToTs ? Math.floor((validToTs - now) / (1000 * 60 * 60 * 24)) : 0;
+
+        const sanRaw = cert.subjectaltname || '';
+        const san = sanRaw.split(',').map(s => s.trim().replace(/^DNS:/, '')).filter(Boolean);
+        const isWildcard = san.some(s => s.startsWith('*.'));
+
+        resolve({
+          issuer: (cert.issuer && (cert.issuer.O || cert.issuer.CN)) || 'Неизвестно',
+          issuerCN: (cert.issuer && cert.issuer.CN) || '',
+          subject: (cert.subject && cert.subject.CN) || domain,
+          validFrom: cert.valid_from || '',
+          validTo: cert.valid_to || '',
+          daysLeft,
+          san,
+          isWildcard,
+          fingerprint: cert.fingerprint || ''
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    socket.on('error', (err) => {
+      if (finished) return;
+      finished = true;
+      reject(err);
+    });
+    socket.on('timeout', () => {
+      if (finished) return;
+      finished = true;
+      socket.destroy();
+      reject(new Error('Превышено время ожидания SSL'));
+    });
+  });
+}
+
+app.get('/api/ssl/:domain', async (req, res) => {
+  const domain = req.params.domain;
+  if (!domain) return res.status(400).json({ error: 'Домен не указан' });
+  const clean = domain.toLowerCase().replace(/^www\./, '');
+  if (clean === 'localhost' || clean === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(clean)) {
+    return res.status(404).json({ error: 'Локальный адрес' });
+  }
+  try {
+    const info = await getSslCert(domain);
+    res.json({ success: true, domain, ...info });
+  } catch (e) {
+    console.error('SSL ошибка для', domain, ':', e.message);
+    res.status(500).json({ error: 'Не удалось получить сертификат', details: e.message });
+  }
+});
+
 // ===== WHOIS =====
 app.get('/api/whois/:domain', async (req, res) => {
   const domain = req.params.domain;
@@ -550,7 +678,7 @@ app.get('/api/whois/:domain', async (req, res) => {
   }
 });
 
-// ===== ПРОВЕРКА EMAIL ЧЕРЕЗ XPOSEDORNOT (бесплатно, без ключа) =====
+// ===== ПРОВЕРКА EMAIL ЧЕРЕЗ XPOSEDORNOT =====
 app.get('/api/hibp/email/:email', async (req, res) => {
   const email = req.params.email;
   if (!email || !email.includes('@')) {
@@ -564,7 +692,6 @@ app.get('/api/hibp/email/:email', async (req, res) => {
     });
 
     if (response.status === 404) {
-      // Не найдено в утечках
       return res.json({ success: true, breaches: [] });
     }
 
@@ -574,11 +701,8 @@ app.get('/api/hibp/email/:email', async (req, res) => {
     }
 
     const data = await response.json();
-
-    // XposedOrNot возвращает { status: "success", breaches: [...] } или { "breaches": [...] }
     const breachNames = data.breaches || data.Breaches || [];
 
-    // Преобразуем список имён в объекты, как ожидает фронтенд
     const breaches = breachNames.map(name => ({
       Name: name,
       Title: name,
@@ -622,30 +746,32 @@ app.post('/api/check', (req, res) => {
   let verdict = 'safe';
   const reasons = [];
   const BLACKLIST = [
-  // Примеры / базовые
-  'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
-  // Двойники case-battle
-  'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru',
-  // Фишинг
-  'brevis.by','moneyatphone.top',
-  // Лотереи/опросы
-  'fastrefund.website','hmail1009.blogspot.nl','prizeme.com.ua','spleth.icu',
-  // SMS-разводы
-  'jugem.jp','100linksdvgpn.avafedors.freedomain.thehost.com.ua','6gyf.sionas.homelinux.org','driveron.ru','drivers.byethost16.com','files.truetds.icu','forum.jokke.ru','fqevj.kolomnatrud.ru','fsfll.fgawudownsyfuf.info','geforcesh.preumnoj.ru','gsmsignal.ru','hit-kino.com','hjpzt.rtk-sales.ru','ikbsk.bear-hunt.ru','maksiko.ru','msaav.radiofaiz.ru','opendrivers.ru','orav.info','pravoholding.ru','qsiub.atomproduction.ru','qwcxp.elcoleso.ru','vernaconsco.rutopik.ru','vihce.wilgood63.ru','xagoc.geo-meter.ru',
-  // Фейковые загрузки
-  'apponic.com','download-windows.org','downloadastro.com','1progs.ru','advanced-systemcare-com.ru','aktiv-windows.ucoz.com','andyroid.net','antikeys.org','bandicam-pro.ru','botdilofce.bandcamp.com','boxprograms.ru','chelcenter.ru','computta.com','crackheaps.com','crackpluskeygen.org','doublegames.ru','downloadelements.com','driveridentifier.com','drivers.org.ru','driverunpaid.ru','drp.su','filesdatabase4u.com','filehorse.com','freecrackpatch.com','fsm-portal.net','get.cryptobrowser.site','installpack.net','jeweell.com','kichkas.biz','kryptex.org','listid.ru','mediagetsite.com','mirsofta.ru','moiprogrammy.com','mwfix.ru','nikask.ru','nullthemedownload.com','nvidiadrivers.net','oneindir.com','oneprogs.ru','removal-virusguide.com','savow.com','serialms.com','smojem.ru','softkumir.ru','softportal.com','solvusoft.com','teramissu-hom.com','top-best-browser.ru','tvoiprogrammy.ru','ubar-pro4.ru','upantool.com','updatestar.com','vipmolik.net','virus4remove.com','w10-digital-activation-program.ru','winxpsoft.com','xeplayer.com','youtube.net.ua',
-  // Вирусы
-  'imei-poisk.ru','programmi-dlya-vzloma.com','17ebook.com','aladel.net','bpwhamburgorchardpark.org','clicnews.com','dfwdiesel.net','divineenterprises.net','fantasticfilms.ru','gardensrestaurantandcatering.com','ginedis.com','gncr.org','hdvideoforums.org','hihanin.com','kingfamilyphotoalbum.com','likaraoke.com','mactep.org','magic4you.nu','marbling.pe.kr','nacjalneg.info','pronline.ru','purplehoodie.com','qsng.cn','seksburada.net','sportsmansclub.net','stock888.cn','tathli.com','teamclouds.com','texaswhitetailfever.com','wadefamilytree.org','xnescat.info','yt118.com',
-  // Подозрительные
-  'unvesouver39238.weebly.com'
-];
+    // Примеры / базовые
+    'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
+    // Двойники case-battle
+    'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru',
+    // Фишинг
+    'brevis.by','moneyatphone.top',
+    // Лотереи/опросы
+    'fastrefund.website','hmail1009.blogspot.nl','prizeme.com.ua','spleth.icu',
+    // SMS-разводы
+    'jugem.jp','100linksdvgpn.avafedors.freedomain.thehost.com.ua','6gyf.sionas.homelinux.org','driveron.ru','drivers.byethost16.com','files.truetds.icu','forum.jokke.ru','fqevj.kolomnatrud.ru','fsfll.fgawudownsyfuf.info','geforcesh.preumnoj.ru','gsmsignal.ru','hit-kino.com','hjpzt.rtk-sales.ru','ikbsk.bear-hunt.ru','maksiko.ru','msaav.radiofaiz.ru','opendrivers.ru','orav.info','pravoholding.ru','qsiub.atomproduction.ru','qwcxp.elcoleso.ru','vernaconsco.rutopik.ru','vihce.wilgood63.ru','xagoc.geo-meter.ru',
+    // Фейковые загрузки
+    'apponic.com','download-windows.org','downloadastro.com','1progs.ru','advanced-systemcare-com.ru','aktiv-windows.ucoz.com','andyroid.net','antikeys.org','bandicam-pro.ru','botdilofce.bandcamp.com','boxprograms.ru','chelcenter.ru','computta.com','crackheaps.com','crackpluskeygen.org','doublegames.ru','downloadelements.com','driveridentifier.com','drivers.org.ru','driverunpaid.ru','drp.su','filesdatabase4u.com','filehorse.com','freecrackpatch.com','fsm-portal.net','get.cryptobrowser.site','installpack.net','jeweell.com','kichkas.biz','kryptex.org','listid.ru','mediagetsite.com','mirsofta.ru','moiprogrammy.com','mwfix.ru','nikask.ru','nullthemedownload.com','nvidiadrivers.net','oneindir.com','oneprogs.ru','removal-virusguide.com','savow.com','serialms.com','smojem.ru','softkumir.ru','softportal.com','solvusoft.com','teramissu-hom.com','top-best-browser.ru','tvoiprogrammy.ru','ubar-pro4.ru','upantool.com','updatestar.com','vipmolik.net','virus4remove.com','w10-digital-activation-program.ru','winxpsoft.com','xeplayer.com','youtube.net.ua',
+    // Вирусы
+    'imei-poisk.ru','programmi-dlya-vzloma.com','17ebook.com','aladel.net','bpwhamburgorchardpark.org','clicnews.com','dfwdiesel.net','divineenterprises.net','fantasticfilms.ru','gardensrestaurantandcatering.com','ginedis.com','gncr.org','hdvideoforums.org','hihanin.com','kingfamilyphotoalbum.com','likaraoke.com','mactep.org','magic4you.nu','marbling.pe.kr','nacjalneg.info','pronline.ru','purplehoodie.com','qsng.cn','seksburada.net','sportsmansclub.net','stock888.cn','tathli.com','teamclouds.com','texaswhitetailfever.com','wadefamilytree.org','xnescat.info','yt118.com',
+    // Подозрительные
+    'unvesouver39238.weebly.com'
+  ];
   const SUSPICIOUS_PATTERNS = ['free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'];
 
+  // 1. Чёрный список
   if (BLACKLIST.some(b => cleanDomain.includes(b))) {
     verdict = 'dangerous';
     reasons.push('Домен в чёрном списке КиберЩит');
   }
 
+  // 2. Двойники
   if (verdict !== 'dangerous' && !isLegitimateBrand(cleanDomain)) {
     const lookalike = findLookalike(cleanDomain);
     if (lookalike) {
@@ -659,11 +785,28 @@ app.post('/api/check', (req, res) => {
     }
   }
 
+  // 3. НОВОЕ: Рандомный поддомен на бесплатной платформе
+  if (verdict === 'safe' && !isLegitimateBrand(cleanDomain)) {
+    const dyn = isDynamicPhishing(cleanDomain);
+    if (dyn) {
+      verdict = 'suspicious';
+      reasons.push(`Похоже на фишинг на платформе ${dyn.platform} (${dyn.reason})`);
+    }
+  }
+
+  // 4. НОВОЕ: Подозрительный TLD
+  if (verdict === 'safe' && hasSuspiciousTLD(cleanDomain)) {
+    verdict = 'suspicious';
+    reasons.push(`Зона .${cleanDomain.split('.').pop()} часто используется мошенниками`);
+  }
+
+  // 5. Подозрительные паттерны в имени
   if (SUSPICIOUS_PATTERNS.some(p => cleanDomain.includes(p))) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Подозрительное имя домена');
   }
 
+  // 6. HTTPS
   if (url.startsWith('http://')) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Соединение без HTTPS');

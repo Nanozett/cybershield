@@ -6,19 +6,19 @@
 </head>
 <body>
   <div class="popup">
-    <!-- Шапка -->
     <div class="header">
       <div class="logo">🛡️</div>
       <div>
         <div class="brand">КиберЩит</div>
-        <div class="version">v4.0</div>
+        <div class="version">v4.4</div>
       </div>
-      <button class="dashboard-btn" id="openDashboardBtn" title="Дашборд">
-        📊
-      </button>
+      <div style="display:flex; gap:6px; margin-left:auto;">
+  <button class="dashboard-btn" id="openScannerBtn" title="Сканер безопасности" style="margin-left:0;">🔍</button>
+  <button class="dashboard-btn" id="openDashboardBtn" title="Дашборд" style="margin-left:0;">📊</button>
+</div>
     </div>
 
-    <!-- Статус страницы -->
+    <!-- Статус -->
     <div class="status-card" id="statusCard">
       <div class="status-icon" id="statusIcon">?</div>
       <div class="status-content">
@@ -28,20 +28,37 @@
       </div>
     </div>
 
-    <!-- Счётчик трекеров -->
+    <!-- Трекеры -->
     <div class="section tracker-section" id="trackerSection" style="display:none;">
       <div class="section-title">
-        <span>🚫 Заблокировано трекеров</span>
+        <span>🚫 Трекеров заблокировано</span>
         <span class="tracker-badge" id="trackerCount">0</span>
       </div>
       <div class="tracker-list" id="trackerList"></div>
     </div>
 
-    <!-- Расширенная карточка сайта -->
-    <div class="section" id="siteCardSection" style="display:none;">
+    <!-- Cookies -->
+    <div class="section" id="cookiesSection" style="display:none;">
       <div class="section-title">
-        <span>🔎 О сайте</span>
+        <span>🍪 Cookies на сайте</span>
+        <button class="link-btn" id="deleteCookiesBtn">Удалить все</button>
       </div>
+      <div class="cookie-stats" id="cookieStats"></div>
+      <div class="cookie-list" id="cookieList"></div>
+    </div>
+
+    <!-- SSL -->
+    <div class="section" id="sslSection" style="display:none;">
+      <div class="section-title">
+        <span>🔒 SSL-сертификат</span>
+        <span class="ssl-badge" id="sslBadge">—</span>
+      </div>
+      <div class="ssl-info" id="sslInfo"></div>
+    </div>
+
+    <!-- О сайте -->
+    <div class="section" id="siteCardSection" style="display:none;">
+      <div class="section-title"><span>🔎 О сайте</span></div>
       <div class="site-info" id="siteInfo"></div>
     </div>
 
@@ -54,7 +71,7 @@
       </div>
     </div>
 
-    <!-- Проверка email на утечки -->
+    <!-- Email -->
     <div class="section">
       <div class="section-title"><span>📧 Проверка email</span></div>
       <div class="email-box">

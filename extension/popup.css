@@ -1,12 +1,12 @@
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Roboto,system-ui,sans-serif; }
 body { width: 380px; background:#f4f7fc; color:#1e293b; }
-.popup { padding:14px; max-height: 600px; overflow-y: auto; }
+.popup { padding:14px; max-height: 620px; overflow-y: auto; }
 
 .header { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e2e8f0; }
 .header .logo { font-size:32px; }
 .brand { font-size:18px; font-weight:800; color:#0b1a2e; }
 .version { font-size:11px; color:#94a3b8; }
-.dashboard-btn { margin-left:auto; background:#f8fafc; border:1px solid #e2e8f0; width:36px; height:36px; border-radius:10px; cursor:pointer; font-size:16px; transition:0.2s; }
+.dashboard-btn { margin-left:auto; background:#f8fafc; border:1px solid #e2e8f0; width:36px; height:36px; border-radius:10px; cursor:pointer; font-size:16px; }
 .dashboard-btn:hover { background:#3b82f6; border-color:#3b82f6; }
 
 .status-card { display:flex; align-items:center; gap:12px; background:white; border-radius:14px; padding:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:12px; border-left:4px solid #95a5a6; }
@@ -29,8 +29,9 @@ body { width: 380px; background:#f4f7fc; color:#1e293b; }
 .section { background:white; border-radius:14px; padding:12px; margin-bottom:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
 .section-title { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700; color:#0b1a2e; margin-bottom:10px; }
 .link-btn { background:none; border:none; color:#3b82f6; font-size:12px; cursor:pointer; font-weight:600; }
+.link-btn:hover { text-decoration:underline; }
 
-/* Трекеры */
+/* Trackers */
 .tracker-section { background: linear-gradient(135deg, #7c3aed, #6366f1); color: white; }
 .tracker-section .section-title { color: white; }
 .tracker-badge { background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 20px; font-size: 16px; font-weight: 800; }
@@ -38,14 +39,47 @@ body { width: 380px; background:#f4f7fc; color:#1e293b; }
 .tracker-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.2); }
 .tracker-item:last-child { border: 0; }
 
-/* Карточка сайта */
+/* Cookies */
+.cookie-stats { display: flex; gap: 8px; margin-bottom: 10px; }
+.cookie-stat-box { flex: 1; text-align: center; padding: 8px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.cookie-stat-num { font-size: 20px; font-weight: 800; color: #0b1a2e; line-height: 1; }
+.cookie-stat-label { font-size: 11px; color: #64748b; margin-top: 4px; }
+.cookie-stat-box.danger .cookie-stat-num { color: #e74c3c; }
+.cookie-stat-box.warn .cookie-stat-num { color: #f39c12; }
+.cookie-stat-box.ok .cookie-stat-num { color: #2ecc71; }
+
+.cookie-list { max-height: 140px; overflow-y: auto; font-size: 12px; }
+.cookie-item { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px dashed #e2e8f0; }
+.cookie-item:last-child { border: 0; }
+.cookie-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #2ecc71; }
+.cookie-dot.third { background: #e74c3c; }
+.cookie-name { flex: 1; color: #1e293b; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cookie-domain { color: #94a3b8; font-size: 11px; }
+.cookie-empty { text-align: center; color: #94a3b8; padding: 10px; font-size: 12px; }
+
+/* SSL */
+.ssl-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #e2e8f0; color: #475569; }
+.ssl-badge.ok { background: #d1fae5; color: #065f46; }
+.ssl-badge.warn { background: #fef3c7; color: #92400e; }
+.ssl-badge.danger { background: #fee2e2; color: #991b1b; }
+
+.ssl-info { font-size: 12px; }
+.ssl-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+.ssl-row:last-child { border: 0; }
+.ssl-label { color: #64748b; }
+.ssl-value { font-weight: 600; color: #1e293b; text-align: right; max-width: 65%; word-break: break-all; }
+.ssl-value.danger { color: #e74c3c; }
+.ssl-value.warn { color: #f39c12; }
+.ssl-value.ok { color: #2ecc71; }
+
+/* Site info */
 .site-info { font-size: 12px; }
 .site-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
 .site-row:last-child { border: 0; }
 .site-label { color: #64748b; }
 .site-value { font-weight: 600; color: #1e293b; text-align: right; max-width: 60%; word-break: break-all; }
 
-/* Год создания */
+/* Creation */
 .creation-info { display:flex; align-items:baseline; gap:12px; padding:4px 0; }
 .creation-year { font-size:28px; font-weight:800; color:#0b1a2e; line-height:1; }
 .creation-age { font-size:13px; font-weight:600; }

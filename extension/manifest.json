@@ -1,11 +1,14 @@
 {
   "manifest_version": 3,
   "name": "КиберЩит — защита в реальном времени",
-  "version": "4.0.0",
-  "description": "Проверка сайтов, трекеров, паролей и email. Расширенная защита данных.",
+  "version": "4.5.0",
+  "description": "Сканер безопасности браузера, cookies, SSL, трекеры, пароли и email.",
   "permissions": [
     "storage",
     "tabs",
+    "cookies",
+    "privacy",
+    "management",
     "notifications",
     "alarms",
     "activeTab",
