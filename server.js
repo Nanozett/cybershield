@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const XLSX = require('xlsx');
 const tls = require('tls');
 const { createClient } = require('@libsql/client');
 
@@ -82,6 +83,210 @@ async function dbRun(sql, args = []) {
     lastID: result.lastInsertRowid ? Number(result.lastInsertRowid) : null,
     changes: result.rowsAffected || 0
   };
+}
+
+// ===== Константы для Яндекс.Диска =====
+const YANDEX_PUBLIC_KEY = 'eSjfjNM06Zcyzwqv5124yiPegnqahzm72s0qoIz-cKg6Y1haOWRpYXFSZw';
+const YANDEX_DOWNLOAD_API = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${YANDEX_PUBLIC_KEY}`;
+
+// Кэш расписания в памяти
+let scheduleCache = {
+  data: null,          // { groups: [...], schedule: {...} }
+  rawRows: null,       // сырые данные для отладки
+  lastUpdate: 0
+};
+const SCHEDULE_CACHE_TTL = 60 * 60 * 1000; // 1 час
+
+// ===== Парсинг XLSX =====
+const DAY_NAME_TO_NUM = {
+  'понедельник': 1, 'пн': 1, 'monday': 1, 'mon': 1,
+  'вторник': 2, 'вт': 2, 'tuesday': 2, 'tue': 2,
+  'среда': 3, 'ср': 3, 'wednesday': 3, 'wed': 3,
+  'четверг': 4, 'чт': 4, 'thursday': 4, 'thu': 4,
+  'пятница': 5, 'пт': 5, 'friday': 5, 'fri': 5,
+  'суббота': 6, 'сб': 6, 'saturday': 6, 'sat': 6,
+  'воскресенье': 7, 'вс': 7, 'sunday': 7, 'sun': 7
+};
+
+// Парсит одну ячейку с парой: предмет, преподаватель, аудитория, время
+function parsePairCell(text) {
+  const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+
+  let subject = '', teacher = '', room = '', startTime = '', endTime = '';
+
+  // Время вида 08:30-10:00
+  const timeMatch = String(text).match(/(\d{1,2}[:.]\d{2})\s*[-–—]\s*(\d{1,2}[:.]\d{2})/);
+  if (timeMatch) {
+    startTime = timeMatch[1].replace('.', ':');
+    endTime = timeMatch[2].replace('.', ':');
+  }
+
+  // Аудитория вида "ауд. 305", "каб. 412", "А-305"
+  const roomMatch = String(text).match(/(?:ауд\.?|каб\.?|аудитория)\s*([\w\-/А-Яа-я]+)/i);
+  if (roomMatch) room = roomMatch[1];
+
+  // Первая «нормальная» строка — предмет (не время, не аудитория)
+  for (const line of lines) {
+    if (!/^\d{1,2}[:.]\d{2}/.test(line) && !/^ауд/i.test(line) && !/^каб/i.test(line)) {
+      subject = line;
+      break;
+    }
+  }
+
+  // Преподаватель — ФИО с инициалами или полное ФИО
+  for (const line of lines) {
+    if (line === subject) continue;
+    if (/^[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\./.test(line)) {
+      teacher = line;
+      break;
+    }
+  }
+  if (!teacher) {
+    for (const line of lines) {
+      if (line === subject) continue;
+      if (line.split(/\s+/).length >= 2 && /^[А-ЯЁ]/.test(line) && !/^\d/.test(line)) {
+        teacher = line;
+        break;
+      }
+    }
+  }
+
+  return {
+    subject: subject || lines[0].slice(0, 80),
+    teacher: teacher || 'Не указан',
+    room: room || '—',
+    start_time: startTime || '—',
+    end_time: endTime || '—'
+  };
+}
+
+// Автоматически находит в листе столбцы дней недели и строки с парами
+function parseSheet(sheetName, sheet) {
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+  // 1) Ищем строку-заголовок с днями недели
+  let headerRowIdx = -1;
+  const dayCols = {}; // { colIdx: dayNum }
+
+  for (let i = 0; i < rows.length && headerRowIdx === -1; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const detected = {};
+    let count = 0;
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toLowerCase().trim();
+      for (const [key, num] of Object.entries(DAY_NAME_TO_NUM)) {
+        if (cell === key || cell.includes(key)) {
+          if (!detected[j]) { detected[j] = num; count++; }
+          break;
+        }
+      }
+    }
+    if (count >= 3) {
+      headerRowIdx = i;
+      Object.assign(dayCols, detected);
+    }
+  }
+
+  if (headerRowIdx === -1) {
+    return { group: sheetName.trim(), pairs: [], note: 'Заголовки дней не найдены' };
+  }
+
+  // 2) Идём по строкам ниже — это пары. Номер пары = первая ячейка.
+  const pairs = [];
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !row.length) continue;
+    const first = String(row[0] || '').trim();
+    const pairNum = parseInt(first, 10);
+    if (!pairNum || pairNum < 1 || pairNum > 10) continue;
+
+    for (const colIdxStr of Object.keys(dayCols)) {
+      const colIdx = parseInt(colIdxStr, 10);
+      const dayNum = dayCols[colIdxStr];
+      const cellText = String(row[colIdx] || '').trim();
+      if (!cellText || cellText === '—' || cellText === '-' || cellText === '–') continue;
+
+      const parsed = parsePairCell(cellText);
+      if (!parsed) continue;
+
+      pairs.push({
+        day_of_week: dayNum,
+        pair_number: pairNum,
+        subject: parsed.subject,
+        teacher: parsed.teacher,
+        room: parsed.room,
+        start_time: parsed.start_time,
+        end_time: parsed.end_time
+      });
+    }
+  }
+
+  return { group: sheetName.trim(), pairs };
+}
+
+// ===== Загрузка и парсинг XLSX =====
+async function fetchScheduleFromYandex() {
+  console.log('📥 Загрузка расписания с Яндекс.Диска...');
+
+  // 1. Прямая ссылка через API Яндекс.Диска
+  const metaRes = await fetch(YANDEX_DOWNLOAD_API);
+  if (!metaRes.ok) throw new Error(`Яндекс API: ${metaRes.status}`);
+  const meta = await metaRes.json();
+  if (!meta.href) throw new Error('Нет поля href в ответе Яндекс.Диска');
+
+  // 2. Скачиваем файл
+  const fileRes = await fetch(meta.href);
+  if (!fileRes.ok) throw new Error(`Не удалось скачать файл: ${fileRes.status}`);
+  const arrayBuffer = await fileRes.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // 3. Парсим XLSX
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  console.log('📄 Листы:', workbook.SheetNames);
+
+  // 4. Сырые данные для отладки (/api/schedule/raw)
+  const rawRows = [];
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    rawRows.push({ sheetName, rows: rows.slice(0, 30) });
+  }
+
+  // 5. Парсим каждую страницу как группу
+  const groups = [];
+  const schedule = {}; // { groupName: [pairs] }
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    const parsed = parseSheet(sheetName, sheet);
+    groups.push(parsed.group);
+    schedule[parsed.group] = parsed.pairs;
+    console.log(`  → ${parsed.group}: ${parsed.pairs.length} пар`);
+  }
+
+  return { groups, schedule, rawRows };
+}
+
+// ===== Обновление кэша =====
+async function updateScheduleCache(force = false) {
+  const now = Date.now();
+  if (!force && scheduleCache.data && (now - scheduleCache.lastUpdate) < SCHEDULE_CACHE_TTL) {
+    return scheduleCache.data;
+  }
+  try {
+    const fresh = await fetchScheduleFromYandex();
+    scheduleCache.data = { groups: fresh.groups, schedule: fresh.schedule };
+    scheduleCache.rawRows = fresh.rawRows;
+    scheduleCache.lastUpdate = now;
+    console.log('✅ Расписание обновлено');
+    return scheduleCache.data;
+  } catch (e) {
+    console.error('❌ Ошибка загрузки расписания:', e.message);
+    if (scheduleCache.data) return scheduleCache.data;
+    throw e;
+  }
 }
 
 // ===== Инициализация таблиц =====
@@ -240,7 +445,6 @@ const LEGITIMATE_BRANDS = [
   'tinkoff.ru', 'alfabank.ru'
 ];
 
-// ===== Динамические платформы (часто используются мошенниками) =====
 const DYNAMIC_HOSTING_PLATFORMS = [
   'jugem.jp',
   'blogspot.com', 'blogspot.nl', 'blogspot.ru', 'blogspot.de', 'blogspot.co.uk',
@@ -259,12 +463,10 @@ const DYNAMIC_HOSTING_PLATFORMS = [
   'repl.co'
 ];
 
-// ===== Подозрительные TLD =====
 const SUSPICIOUS_TLDS = [
   'icu', 'top', 'gq', 'ml', 'tk', 'cf', 'ga', 'click'
 ];
 
-// ===== Нормализация домена =====
 function normalizeDomain(name) {
   let s = String(name).toLowerCase();
   const homoglyphs = { 'а':'a','е':'e','о':'o','р':'p','с':'c','х':'x','у':'y','к':'k','в':'b','н':'h','м':'m','т':'t','і':'i','ї':'i','ё':'e','ѕ':'s','ј':'j','ԁ':'d' };
@@ -272,7 +474,6 @@ function normalizeDomain(name) {
   return s.replace(/[-_]/g, '');
 }
 
-// ===== Расстояние Левенштейна =====
 function levenshtein(a, b) {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -313,19 +514,16 @@ function isLegitimateBrand(domain) {
   });
 }
 
-// ===== НОВОЕ: Детект рандомного поддомена на бесплатной платформе =====
 function isDynamicPhishing(domain) {
   const clean = domain.toLowerCase().replace(/^www\./, '');
   for (const platform of DYNAMIC_HOSTING_PLATFORMS) {
     if (clean.endsWith('.' + platform)) {
       const subdomain = clean.slice(0, -(platform.length + 1));
-      // 1) Чисто буквенно-цифровая строка 4–20 символов с цифрами — рандом
       if (/^[a-z0-9]{4,20}$/.test(subdomain) && /\d/.test(subdomain)) {
         if (!/(my|blog|test|dev|photo|travel|food|news|life|shop|site|home)/i.test(subdomain)) {
           return { platform, subdomain, reason: 'Рандомный поддомен на бесплатной платформе' };
         }
       }
-      // 2) Длинный поддомен (> 20 символов) — тоже часто рандом
       if (subdomain.length > 20) {
         return { platform, subdomain, reason: 'Подозрительно длинный поддомен' };
       }
@@ -334,7 +532,6 @@ function isDynamicPhishing(domain) {
   return null;
 }
 
-// ===== НОВОЕ: Проверка TLD =====
 function hasSuspiciousTLD(domain) {
   const parts = domain.toLowerCase().split('.');
   const tld = parts[parts.length - 1];
@@ -582,16 +779,136 @@ app.post('/api/submissions/:id/approve', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
+// ===== РАСПИСАНИЕ =====
+app.get('/api/schedule/raw', async (req, res) => {
+  try {
+    await updateScheduleCache();
+    res.json({ success: true, sheets: scheduleCache.rawRows });
+  } catch (e) {
+    res.status(500).json({ error: 'Не удалось загрузить файл', details: e.message });
+  }
+});
+
+app.get('/api/groups', async (req, res) => {
+  try {
+    const data = await updateScheduleCache();
+    res.json(data.groups || []);
+  } catch (e) {
+    console.error('Ошибка /api/groups:', e.message);
+    res.status(500).json({ error: 'Не удалось загрузить расписание', details: e.message });
+  }
+});
+
+app.get('/api/schedule', async (req, res) => {
+  const { group, date } = req.query;
+  if (!group || !date) return res.status(400).json({ error: 'Укажите group и date' });
+
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return res.status(400).json({ error: 'Некорректная дата' });
+  const jsDay = d.getDay();
+  const dow = jsDay === 0 ? 7 : jsDay;
+
+  const dayNames = ['', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+
+  try {
+    const data = await updateScheduleCache();
+    const allPairs = (data.schedule && data.schedule[group]) || [];
+    const pairs = allPairs
+      .filter(p => p.day_of_week === dow)
+      .sort((a, b) => a.pair_number - b.pair_number);
+
+    res.json({
+      group,
+      date,
+      dayOfWeek: dow,
+      dayName: dayNames[dow],
+      pairs,
+      count: pairs.length
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Ошибка загрузки', details: e.message });
+  }
+});
+
+app.get('/api/schedule/analyze', async (req, res) => {
+  const { group } = req.query;
+  if (!group) return res.status(400).json({ error: 'Укажите group' });
+
+  const dayNames = ['', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+
+  try {
+    const data = await updateScheduleCache();
+    const allPairs = (data.schedule && data.schedule[group]) || [];
+    const days = [];
+
+    const toMin = t => {
+      if (!t || t === '—') return 0;
+      const [h, m] = String(t).split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    for (let dow = 1; dow <= 6; dow++) {
+      const pairs = allPairs
+        .filter(p => p.day_of_week === dow)
+        .sort((a, b) => a.pair_number - b.pair_number);
+
+      if (pairs.length === 0) {
+        days.push({
+          dayOfWeek: dow, dayName: dayNames[dow],
+          count: 0, firstStart: null, lastEnd: null,
+          gaps: 0, score: 0, verdict: 'свободен'
+        });
+        continue;
+      }
+
+      const firstStart = pairs[0].start_time;
+      const lastEnd = pairs[pairs.length - 1].end_time;
+
+      let gaps = 0;
+      for (let i = 1; i < pairs.length; i++) {
+        const prevEnd = toMin(pairs[i - 1].end_time);
+        const curStart = toMin(pairs[i].start_time);
+        if (prevEnd && curStart && curStart - prevEnd > 25) gaps++;
+      }
+
+      const endMinutes = toMin(lastEnd);
+      const score = pairs.length * 100 + endMinutes + gaps * 50;
+
+      let verdict = 'средний';
+      if (pairs.length <= 2 && endMinutes && endMinutes <= 15 * 60) verdict = 'идеален для работы';
+      else if (pairs.length <= 3 && endMinutes && endMinutes <= 16 * 60) verdict = 'хорош для работы';
+      else if (pairs.length >= 4) verdict = 'загруженный';
+
+      days.push({
+        dayOfWeek: dow, dayName: dayNames[dow],
+        count: pairs.length, firstStart, lastEnd,
+        gaps, score, verdict
+      });
+    }
+
+    const working = days.filter(d => d.count > 0).sort((a, b) => a.score - b.score);
+    const bestDay = working[0] || null;
+
+    res.json({
+      group,
+      days,
+      bestDay,
+      recommendation: bestDay
+        ? `Лучший день для подработки — ${bestDay.dayName} (${bestDay.count} пар, до ${bestDay.lastEnd}).`
+        : 'Нет данных для анализа.'
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Ошибка анализа', details: e.message });
+  }
+});
+
 // ===== SSL-сертификат =====
 function getSslCert(domain) {
   return new Promise((resolve, reject) => {
     let finished = false;
     const socket = tls.connect({
-      host: domain,
-      port: 443,
-      servername: domain,
-      rejectUnauthorized: false,
-      timeout: 6000,
+      host: domain, port: 443, servername: domain,
+      rejectUnauthorized: false, timeout: 6000
     }, () => {
       if (finished) return;
       finished = true;
@@ -601,40 +918,26 @@ function getSslCert(domain) {
         if (!cert || !cert.subject || Object.keys(cert).length === 0) {
           return reject(new Error('Не удалось получить сертификат'));
         }
-
         const now = Date.now();
-        const validFromTs = cert.valid_from ? new Date(cert.valid_from).getTime() : 0;
         const validToTs = cert.valid_to ? new Date(cert.valid_to).getTime() : 0;
         const daysLeft = validToTs ? Math.floor((validToTs - now) / (1000 * 60 * 60 * 24)) : 0;
-
         const sanRaw = cert.subjectaltname || '';
         const san = sanRaw.split(',').map(s => s.trim().replace(/^DNS:/, '')).filter(Boolean);
         const isWildcard = san.some(s => s.startsWith('*.'));
-
         resolve({
           issuer: (cert.issuer && (cert.issuer.O || cert.issuer.CN)) || 'Неизвестно',
           issuerCN: (cert.issuer && cert.issuer.CN) || '',
           subject: (cert.subject && cert.subject.CN) || domain,
           validFrom: cert.valid_from || '',
           validTo: cert.valid_to || '',
-          daysLeft,
-          san,
-          isWildcard,
+          daysLeft, san, isWildcard,
           fingerprint: cert.fingerprint || ''
         });
-      } catch (e) {
-        reject(e);
-      }
+      } catch (e) { reject(e); }
     });
-
-    socket.on('error', (err) => {
-      if (finished) return;
-      finished = true;
-      reject(err);
-    });
+    socket.on('error', err => { if (finished) return; finished = true; reject(err); });
     socket.on('timeout', () => {
-      if (finished) return;
-      finished = true;
+      if (finished) return; finished = true;
       socket.destroy();
       reject(new Error('Превышено время ожидания SSL'));
     });
@@ -657,7 +960,7 @@ app.get('/api/ssl/:domain', async (req, res) => {
   }
 });
 
-// ===== Health Check (для keep-warm) =====
+// ===== Health Check =====
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -683,41 +986,23 @@ app.get('/api/whois/:domain', async (req, res) => {
   }
 });
 
-// ===== ПРОВЕРКА EMAIL ЧЕРЕЗ XPOSEDORNOT =====
+// ===== EMAIL =====
 app.get('/api/hibp/email/:email', async (req, res) => {
   const email = req.params.email;
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Некорректный email' });
-  }
-
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Некорректный email' });
   try {
     const xonUrl = `https://api.xposedornot.com/v1/check-email/${encodeURIComponent(email)}`;
     const response = await fetch(xonUrl, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'KiberShield-Extension' }
     });
-
-    if (response.status === 404) {
-      return res.json({ success: true, breaches: [] });
-    }
-
-    if (!response.ok) {
-      console.error('XposedOrNot вернул статус', response.status);
-      return res.status(500).json({ error: 'Ошибка сервиса проверки', status: response.status });
-    }
-
+    if (response.status === 404) return res.json({ success: true, breaches: [] });
+    if (!response.ok) return res.status(500).json({ error: 'Ошибка сервиса', status: response.status });
     const data = await response.json();
     const breachNames = data.breaches || data.Breaches || [];
-
-    const breaches = breachNames.map(name => ({
-      Name: name,
-      Title: name,
-      BreachDate: '',
-      PwnCount: null
-    }));
-
+    const breaches = breachNames.map(name => ({ Name: name, Title: name, BreachDate: '', PwnCount: null }));
     res.json({ success: true, breaches });
   } catch (e) {
-    console.error('XposedOrNot ошибка для', email, ':', e.message);
+    console.error('XposedOrNot ошибка:', e.message);
     res.status(500).json({ error: 'Не удалось проверить email', details: e.message });
   }
 });
@@ -751,32 +1036,22 @@ app.post('/api/check', (req, res) => {
   let verdict = 'safe';
   const reasons = [];
   const BLACKLIST = [
-    // Примеры / базовые
     'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
-    // Двойники case-battle
     'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru',
-    // Фишинг
     'brevis.by','moneyatphone.top',
-    // Лотереи/опросы
     'fastrefund.website','hmail1009.blogspot.nl','prizeme.com.ua','spleth.icu',
-    // SMS-разводы
     'jugem.jp','100linksdvgpn.avafedors.freedomain.thehost.com.ua','6gyf.sionas.homelinux.org','driveron.ru','drivers.byethost16.com','files.truetds.icu','forum.jokke.ru','fqevj.kolomnatrud.ru','fsfll.fgawudownsyfuf.info','geforcesh.preumnoj.ru','gsmsignal.ru','hit-kino.com','hjpzt.rtk-sales.ru','ikbsk.bear-hunt.ru','maksiko.ru','msaav.radiofaiz.ru','opendrivers.ru','orav.info','pravoholding.ru','qsiub.atomproduction.ru','qwcxp.elcoleso.ru','vernaconsco.rutopik.ru','vihce.wilgood63.ru','xagoc.geo-meter.ru',
-    // Фейковые загрузки
     'apponic.com','download-windows.org','downloadastro.com','1progs.ru','advanced-systemcare-com.ru','aktiv-windows.ucoz.com','andyroid.net','antikeys.org','bandicam-pro.ru','botdilofce.bandcamp.com','boxprograms.ru','chelcenter.ru','computta.com','crackheaps.com','crackpluskeygen.org','doublegames.ru','downloadelements.com','driveridentifier.com','drivers.org.ru','driverunpaid.ru','drp.su','filesdatabase4u.com','filehorse.com','freecrackpatch.com','fsm-portal.net','get.cryptobrowser.site','installpack.net','jeweell.com','kichkas.biz','kryptex.org','listid.ru','mediagetsite.com','mirsofta.ru','moiprogrammy.com','mwfix.ru','nikask.ru','nullthemedownload.com','nvidiadrivers.net','oneindir.com','oneprogs.ru','removal-virusguide.com','savow.com','serialms.com','smojem.ru','softkumir.ru','softportal.com','solvusoft.com','teramissu-hom.com','top-best-browser.ru','tvoiprogrammy.ru','ubar-pro4.ru','upantool.com','updatestar.com','vipmolik.net','virus4remove.com','w10-digital-activation-program.ru','winxpsoft.com','xeplayer.com','youtube.net.ua',
-    // Вирусы
     'imei-poisk.ru','programmi-dlya-vzloma.com','17ebook.com','aladel.net','bpwhamburgorchardpark.org','clicnews.com','dfwdiesel.net','divineenterprises.net','fantasticfilms.ru','gardensrestaurantandcatering.com','ginedis.com','gncr.org','hdvideoforums.org','hihanin.com','kingfamilyphotoalbum.com','likaraoke.com','mactep.org','magic4you.nu','marbling.pe.kr','nacjalneg.info','pronline.ru','purplehoodie.com','qsng.cn','seksburada.net','sportsmansclub.net','stock888.cn','tathli.com','teamclouds.com','texaswhitetailfever.com','wadefamilytree.org','xnescat.info','yt118.com',
-    // Подозрительные
     'unvesouver39238.weebly.com'
   ];
   const SUSPICIOUS_PATTERNS = ['free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'];
 
-  // 1. Чёрный список
   if (BLACKLIST.some(b => cleanDomain.includes(b))) {
     verdict = 'dangerous';
     reasons.push('Домен в чёрном списке КиберЩит');
   }
 
-  // 2. Двойники
   if (verdict !== 'dangerous' && !isLegitimateBrand(cleanDomain)) {
     const lookalike = findLookalike(cleanDomain);
     if (lookalike) {
@@ -790,7 +1065,6 @@ app.post('/api/check', (req, res) => {
     }
   }
 
-  // 3. НОВОЕ: Рандомный поддомен на бесплатной платформе
   if (verdict === 'safe' && !isLegitimateBrand(cleanDomain)) {
     const dyn = isDynamicPhishing(cleanDomain);
     if (dyn) {
@@ -799,19 +1073,16 @@ app.post('/api/check', (req, res) => {
     }
   }
 
-  // 4. НОВОЕ: Подозрительный TLD
   if (verdict === 'safe' && hasSuspiciousTLD(cleanDomain)) {
     verdict = 'suspicious';
     reasons.push(`Зона .${cleanDomain.split('.').pop()} часто используется мошенниками`);
   }
 
-  // 5. Подозрительные паттерны в имени
   if (SUSPICIOUS_PATTERNS.some(p => cleanDomain.includes(p))) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Подозрительное имя домена');
   }
 
-  // 6. HTTPS
   if (url.startsWith('http://')) {
     if (verdict === 'safe') verdict = 'suspicious';
     reasons.push('Соединение без HTTPS');
