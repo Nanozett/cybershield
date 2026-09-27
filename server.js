@@ -482,25 +482,9 @@ app.post('/api/submissions/:id/approve', async (req, res) => {
 });
 
 // ===================================================================
-// ===== РАСПИСАНИЕ — парсер v4 =====
+// ===== РАСПИСАНИЕ — парсер v5: парсит ВСЕ группы сразу =====
 // ===================================================================
-console.log('🔥 SCHEDULE PARSER v4 active');
-
-// Нормализует имя группы: кириллица→латиница, убирает все не-буквенно-цифровые
-// "КИТ-ОИБАС-26" → "kitoibas26"
-// "КИТ-ОИБАС-26 - 35 СТУДЕНТОВ" → "kitoibas2635studentob"
-function normalizeGroupKey(s) {
-  const map = {
-    'а':'a','б':'b','в':'b','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z',
-    'и':'i','й':'i','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
-    'с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch',
-    'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
-  };
-  return String(s || '')
-    .toLowerCase()
-    .replace(/[а-яё]/g, c => map[c] !== undefined ? map[c] : c)
-    .replace(/[^a-z0-9]/g, '');
-}
+console.log('🔥 SCHEDULE PARSER v5 active (все группы сразу)');
 
 // Номер пары по времени старта
 function startTimeToSlot(startTime) {
@@ -524,13 +508,16 @@ function dateToSheetName(dateStr) {
   return `${d}${mo}${y.slice(2)}`;
 }
 
-// Парсит лист XLSX и возвращает пары для указанной группы
-function parseScheduleRows(rows, targetGroupRaw) {
-  const target = normalizeGroupKey(targetGroupRaw);
-  if (!target) return [];
+// Извлекает имя группы из строки "КИТ-ОИБАС-26 - 35 СТУДЕНТОВ" → "КИТ-ОИБАС-26"
+function extractGroupName(s) {
+  const m = String(s).match(/^(.*?)\s*-\s*\d+\s*СТУДЕНТ/i);
+  return m ? m[1].trim() : null;
+}
 
-  const pairs = [];
-  let collecting = false;
+// Парсит лист XLSX и возвращает { groupName: [pairs] }
+function parseScheduleSheet(rows) {
+  const result = {};
+  let currentGroup = null;
   const DAY_ABBRS = /^(СБ|ПН|ВТ|СР|ЧТ|ПТ|ВС)$/i;
   const TIME_RANGE = /^\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}$/;
 
@@ -542,29 +529,28 @@ function parseScheduleRows(rows, targetGroupRaw) {
     const E = String(row[4] || '').trim();
     const F = String(row[5] || '').trim();
 
-    // Строка-заголовок секции: колонка A заполнена, B пуста, A — не день недели
+    // Строка-заголовок группы: A заполнена, B пуста, A — не день недели
     if (A && !B && !DAY_ABBRS.test(A)) {
       if (/^Расписани/i.test(A)) continue;
       if (/^Курс\s+\d+/i.test(A)) continue;
-      const aKey = normalizeGroupKey(A);
-      if (aKey.startsWith(target)) {
-        collecting = true;
-      } else if (/СТУДЕНТ/i.test(A)) {
-        collecting = false;
+      const g = extractGroupName(A);
+      if (g) {
+        currentGroup = g;
+        if (!result[currentGroup]) result[currentGroup] = [];
       }
       continue;
     }
 
     if (!TIME_RANGE.test(B)) continue;
-    if (!collecting) continue;
-    if (!C) continue;
+    if (!currentGroup) continue;
+    if (!C) continue; // окно
 
     const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
     if (!tm) continue;
     const startTime = `${tm[1].padStart(2,'0')}:${tm[2]}`;
     const endTime = `${tm[3].padStart(2,'0')}:${tm[4]}`;
 
-    pairs.push({
+    result[currentGroup].push({
       pair_number: startTimeToSlot(startTime),
       subject: C,
       teacher: E || '—',
@@ -573,14 +559,15 @@ function parseScheduleRows(rows, targetGroupRaw) {
       end_time: endTime
     });
   }
-  return pairs;
+  return result;
 }
 
+// ===== ЗАГРУЗКА РАСПИСАНИЯ (все группы сразу) =====
 app.post('/api/schedule/upload', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Требуется авторизация' });
-  const { group, date, filename, data } = req.body;
-  if (!group || !date || !data) return res.status(400).json({ error: 'Нужны group, date и файл' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Дата должна быть в формате YYYY-MM-DD' });
+  const { date, filename, data } = req.body;
+  if (!date || !data) return res.status(400).json({ error: 'Нужны date и файл' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Дата в формате YYYY-MM-DD' });
 
   try {
     const clean = data.replace(/^data:.*?;base64,/, '');
@@ -590,10 +577,10 @@ app.post('/api/schedule/upload', async (req, res) => {
 
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     console.log('=== XLSX UPLOAD ===');
-    console.log('group:', JSON.stringify(group), '| normalized:', normalizeGroupKey(group));
     console.log('date:', date, '| expected sheet:', dateToSheetName(date));
     console.log('sheets:', workbook.SheetNames);
 
+    // Ищем лист под дату
     const expected = dateToSheetName(date);
     let targetSheet = null;
     if (expected) {
@@ -603,67 +590,71 @@ app.post('/api/schedule/upload', async (req, res) => {
     }
     console.log('targetSheet:', targetSheet);
 
-    let allPairs = [];
+    // Парсим: сначала выбранный лист, если нашли группы — используем только его.
+    // Если нет — все листы (fallback).
+    let parsed = {};
 
-    // Сначала пробуем только лист по дате
     if (targetSheet) {
       const sheet = workbook.Sheets[targetSheet];
       if (sheet) {
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-        allPairs = parseScheduleRows(rows, group);
-        console.log(`  sheet ${targetSheet}: ${allPairs.length} пар`);
+        parsed = parseScheduleSheet(rows);
       }
     }
 
-    // Если пусто — идём по всем листам (fallback)
-    if (allPairs.length === 0) {
+    if (Object.keys(parsed).length === 0) {
       console.log('  fallback: парсим все листы');
       for (const sheetName of workbook.SheetNames) {
         const sheet = workbook.Sheets[sheetName];
         if (!sheet) continue;
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-        const pairs = parseScheduleRows(rows, group);
-        if (pairs.length > 0) console.log(`  sheet ${sheetName}: ${pairs.length} пар`);
-        allPairs = allPairs.concat(pairs);
+        const p = parseScheduleSheet(rows);
+        // Объединяем: если группа уже есть, добавляем пары
+        for (const [g, pairs] of Object.entries(p)) {
+          if (!parsed[g]) parsed[g] = [];
+          parsed[g] = parsed[g].concat(pairs);
+        }
       }
     }
 
-    if (allPairs.length === 0) {
-      // Собираем список всех групп из файла для подсказки
-      const groupsInFile = new Set();
-      for (const sheetName of workbook.SheetNames) {
-        const sheet = workbook.Sheets[sheetName];
-        if (!sheet) continue;
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-        for (const row of rows) {
-          if (!row) continue;
-          const A = String(row[0] || '').trim();
-          if (A && /СТУДЕНТ/i.test(A)) {
-            const g = A.replace(/\s*-\s*\d+\s*СТУДЕНТ.*/i, '').trim();
-            if (g) groupsInFile.add(g);
-          }
-        }
-      }
-      console.log('groups in file:', Array.from(groupsInFile));
+    const groups = Object.keys(parsed);
+    const totalPairs = groups.reduce((s, g) => s + parsed[g].length, 0);
+
+    console.log(`📊 Найдено групп: ${groups.length}, всего пар: ${totalPairs}`);
+    for (const g of groups) console.log(`  ${g}: ${parsed[g].length} пар`);
+
+    if (groups.length === 0 || totalPairs === 0) {
       return res.status(400).json({
-        error: `Группа «${group}» не найдена в файле на дату ${date}.`,
-        sheets: workbook.SheetNames,
-        groupsInFile: Array.from(groupsInFile).slice(0, 60)
+        error: 'Не удалось найти ни одной группы с парами. Проверь, что в файле есть строки вида «КИТ-XXX-NN - NN СТУДЕНТОВ» и пары с временем.',
+        sheets: workbook.SheetNames
       });
     }
 
-    // Перезапись
-    await dbRun('DELETE FROM schedule WHERE group_name = ? AND date = ?', [group, date]);
-    for (const p of allPairs) {
-      await dbRun(
-        'INSERT INTO schedule (group_name, date, pair_number, subject, teacher, room, start_time, end_time, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [group, date, p.pair_number, p.subject, p.teacher, p.room, p.start_time, p.end_time, req.session.userId]
-      );
-    }
-    await dbRun('INSERT OR IGNORE INTO groups_list (name) VALUES (?)', [group]);
+    // Сохраняем: сначала удаляем старые записи для этой даты (все группы),
+    // потом вставляем всё заново. Так как файл содержит все группы — это корректно.
+    await dbRun('DELETE FROM schedule WHERE date = ?', [date]);
 
-    console.log(`✅ Сохранено ${allPairs.length} пар для ${group} на ${date}`);
-    res.json({ success: true, saved: allPairs.length, group, date, filename: filename || null });
+    let inserted = 0;
+    for (const [groupName, pairs] of Object.entries(parsed)) {
+      for (const p of pairs) {
+        await dbRun(
+          'INSERT INTO schedule (group_name, date, pair_number, subject, teacher, room, start_time, end_time, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [groupName, date, p.pair_number, p.subject, p.teacher, p.room, p.start_time, p.end_time, req.session.userId]
+        );
+        inserted++;
+      }
+      await dbRun('INSERT OR IGNORE INTO groups_list (name) VALUES (?)', [groupName]);
+    }
+
+    console.log(`✅ Сохранено ${inserted} пар по ${groups.length} группам на ${date}`);
+    res.json({
+      success: true,
+      date,
+      groups: groups.length,
+      totalPairs: inserted,
+      groupNames: groups,
+      filename: filename || null
+    });
   } catch (e) {
     console.error('Ошибка загрузки расписания:', e);
     res.status(500).json({ error: 'Не удалось распарсить файл', details: e.message });
@@ -687,7 +678,6 @@ app.get('/api/schedule/dates', async (req, res) => {
 });
 
 // ===== ОТЛАДКА =====
-// /api/schedule/debug — что реально лежит в БД
 app.get('/api/schedule/debug', async (req, res) => {
   try {
     const rows = await dbAll(`
@@ -695,17 +685,15 @@ app.get('/api/schedule/debug', async (req, res) => {
       FROM schedule
       GROUP BY group_name, date
       ORDER BY date DESC, group_name
-      LIMIT 200
+      LIMIT 300
     `);
     res.json({
-      totalGroups: new Set(rows.map(r => r.group_name)).size,
       totalEntries: rows.length,
       entries: rows.map(r => ({ group: r.group_name, date: r.date, pairs: Number(r.cnt) }))
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// /api/schedule/debug/:group/:date — точное содержимое
 app.get('/api/schedule/debug/:group/:date', async (req, res) => {
   try {
     const rows = await dbAll(
@@ -716,7 +704,6 @@ app.get('/api/schedule/debug/:group/:date', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// /api/schedule/groups-in-db — просто список групп в БД (без дат)
 app.get('/api/schedule/groups-in-db', async (req, res) => {
   try {
     const rows = await dbAll('SELECT DISTINCT group_name FROM schedule ORDER BY group_name');

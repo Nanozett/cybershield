@@ -743,7 +743,7 @@
     </div>
   </div>
 
-  <!-- ЗАГРУЗКА РАСПИСАНИЯ -->
+   <!-- ЗАГРУЗКА РАСПИСАНИЯ -->
   <div class="page" id="page-upload">
     <div class="container">
       <div class="page-title"><svg><use href="#upload"/></svg> Загрузить расписание</div>
@@ -751,11 +751,9 @@
         <div id="uploadAuthWarn" class="upload-auth-warn">
           ⚠️ Для загрузки расписания нужно <a href="#" onclick="document.getElementById('loginBtn').click();return false;" style="color:#991b1b;">войти в аккаунт</a>.
         </div>
-        <div class="upload-field">
-          <label>Группа</label>
-          <input type="text" id="uploadGroup" list="uploadGroupList" placeholder="Например: КИТ-ИСИП-25-1" autocomplete="off">
-          <datalist id="uploadGroupList"></datalist>
-        </div>
+        <p style="color:var(--text-secondary);margin-bottom:20px;">
+          Загрузите один XLSX-файл с расписанием на день — сервер автоматически распарсит <b>все группы сразу</b>. Потом на странице «Расписание» можно будет выбрать нужную группу и дату.
+        </p>
         <div class="upload-field">
           <label>Дата</label>
           <input type="date" id="uploadDate">
@@ -771,10 +769,10 @@
         <div class="upload-hint">
           <strong>📋 Требования к XLSX:</strong>
           <ul>
-            <li>Первая колонка — номер пары (1–10).</li>
-            <li>Далее — предмет, ФИО преподавателя, аудитория, время.</li>
-            <li>Время в формате <code>08:30-10:00</code>.</li>
-            <li>Файл до 15 МБ. Если расписание уже есть на эту дату — оно перезапишется.</li>
+            <li>Один лист = один день (имя листа вида <code>280926</code>).</li>
+            <li>Внутри листа — блоки вида <code>КИТ-XXX-NN - NN СТУДЕНТОВ</code>, под каждым пары.</li>
+            <li>Время в формате <code>08:00-09:35</code>.</li>
+            <li>Файл до 15 МБ. Старое расписание на эту дату будет перезаписано.</li>
           </ul>
         </div>
       </div>
@@ -1682,23 +1680,13 @@
     }
 
     // ===== ЗАГРУЗКА XLSX =====
-    let uploadGroupsLoaded = false;
-
     async function initUploadPage() {
       // Обновляем состояние авторизации
       const warn = document.getElementById('uploadAuthWarn');
-      const form = document.querySelector('.upload-box');
       if (!currentUser) {
         warn.classList.add('show');
       } else {
         warn.classList.remove('show');
-      }
-
-      if (!uploadGroupsLoaded) {
-        const groups = await fetchGroups();
-        const dl = document.getElementById('uploadGroupList');
-        dl.innerHTML = groups.map(g => `<option value="${g}">`).join('');
-        uploadGroupsLoaded = true;
       }
 
       const dateInput = document.getElementById('uploadDate');
@@ -1735,12 +1723,10 @@
         document.getElementById('loginBtn').click();
         return;
       }
-      const group = document.getElementById('uploadGroup').value.trim();
       const date = document.getElementById('uploadDate').value;
       const fileInput = document.getElementById('uploadFile');
       const file = fileInput.files && fileInput.files[0];
 
-      if (!group) { showToast('Укажите группу', 'error'); return; }
       if (!date) { showToast('Укажите дату', 'error'); return; }
       if (!file) { showToast('Выберите XLSX-файл', 'error'); return; }
       if (!/\.(xlsx|xls)$/i.test(file.name)) { showToast('Файл должен быть .xlsx или .xls', 'error'); return; }
@@ -1757,20 +1743,28 @@
         const res = await fetch('/api/schedule/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ group, date, filename: file.name, data: base64 })
+          body: JSON.stringify({ date, filename: file.name, data: base64 })
         });
         const data = await res.json();
 
         if (res.ok && data.success) {
-          setUploadStatus(`✅ Готово! Сохранено <b>${data.saved}</b> ${declOfNum(data.saved, ['пара','пары','пар'])} для <b>${escapeHtml(data.group)}</b> на <b>${escapeHtml(data.date)}</b>.`, 'ok');
-          showToast(`Загружено ${data.saved} ${declOfNum(data.saved, ['пара','пары','пар'])}!`, 'success');
+          setUploadStatus(
+            `✅ Готово! Сохранено <b>${data.totalPairs}</b> ${declOfNum(data.totalPairs, ['пара','пары','пар'])} ` +
+            `по <b>${data.groups}</b> ${declOfNum(data.groups, ['группе','группам','группам'])} на <b>${escapeHtml(data.date)}</b>.`,
+            'ok'
+          );
+          showToast(`Загружено ${data.totalPairs} пар по ${data.groups} группам`, 'success');
           fileInput.value = '';
           // Обновляем список групп на страницах расписания/анализа
           scheduleGroupsLoaded = false;
           analysisGroupsLoaded = false;
-          uploadGroupsLoaded = false;
         } else {
-          setUploadStatus(`❌ ${escapeHtml(data.error || 'Ошибка загрузки')}${data.details ? '<br><small>' + escapeHtml(data.details) + '</small>' : ''}`, 'err');
+          setUploadStatus(
+            `❌ ${escapeHtml(data.error || 'Ошибка загрузки')}` +
+            (data.sheets ? `<br><small>Листы в файле: ${escapeHtml(data.sheets.join(', '))}</small>` : '') +
+            (data.details ? `<br><small>${escapeHtml(data.details)}</small>` : ''),
+            'err'
+          );
           showToast(data.error || 'Ошибка загрузки', 'error');
         }
       } catch (e) {
