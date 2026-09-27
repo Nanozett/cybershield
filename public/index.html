@@ -478,6 +478,50 @@
     .day-analysis-card.hard .day-analysis-verdict { background: #fee2e2; color: #991b1b; }
     .day-analysis-card.medium .day-analysis-verdict { background: #fef3c7; color: #92400e; }
 
+    /* ===== UPLOAD PAGE ===== */
+    .upload-box {
+      max-width: 640px; margin: 0 auto; background: var(--bg-card);
+      padding: 32px; border-radius: 28px; box-shadow: var(--shadow);
+    }
+    .upload-field { margin-bottom: 16px; }
+    .upload-field label { font-weight: 600; display: block; margin-bottom: 6px; }
+    .upload-field input {
+      width: 100%; padding: 12px 16px; border-radius: 30px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg); color: var(--text-primary);
+      font-size: 15px; font-family: inherit;
+    }
+    .upload-field input[type="file"] { border-radius: 16px; padding: 10px 16px; }
+    .upload-field input:focus { outline: none; border-color: var(--accent); }
+    .upload-submit-btn {
+      width: 100%; padding: 14px; background: var(--accent);
+      color: white; border: none; border-radius: 40px;
+      font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .upload-submit-btn:hover { background: var(--accent-hover); transform: scale(1.02); }
+    .upload-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .upload-status {
+      margin-top: 16px; font-size: 14px; padding: 12px 16px;
+      border-radius: 16px; display: none;
+    }
+    .upload-status.show { display: block; }
+    .upload-status.ok { background: #d1fae5; color: #065f46; }
+    .upload-status.err { background: #fee2e2; color: #991b1b; }
+    .upload-status.info { background: var(--comment-bg); color: var(--text-secondary); }
+    .upload-hint {
+      margin-top: 20px; padding: 16px; background: var(--comment-bg);
+      border-radius: 16px; font-size: 14px; color: var(--text-secondary);
+    }
+    .upload-hint ul { margin: 8px 0 0 20px; }
+    .upload-hint code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; }
+    .upload-auth-warn {
+      display: none; background: #fee2e2; color: #991b1b;
+      padding: 12px 16px; border-radius: 16px; margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .upload-auth-warn.show { display: block; }
+
     @media (max-width:768px) {
       .header-flex { flex-direction:column; gap:12px; }
       .header-controls { width:100%; justify-content:center; flex-wrap:wrap; }
@@ -499,6 +543,7 @@
       .pair-card { flex-wrap: wrap; }
       .pair-time { min-width: auto; text-align: left; }
       .day-analysis-card { flex-wrap: wrap; }
+      .upload-box { padding: 20px; }
     }
   </style>
 </head>
@@ -528,6 +573,7 @@
   <symbol id="paper-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
   <symbol id="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
   <symbol id="download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
   <symbol id="copyright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M10 9.3a3 3 0 014 0M10 14.7a3 3 0 014 0"/></symbol>
   <symbol id="bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 010-18"/><path d="M12 21a9 9 0 000-18"/><path d="M8 7l-2-2M16 7l2-2M8 17l-2 2M16 17l2 2"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="skull" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="8"/><path d="M8 14l2 2M16 14l-2 2"/><line x1="9" y1="18" x2="15" y2="18"/><path d="M10 18v2M14 18v2"/></symbol>
@@ -553,6 +599,7 @@
         <a data-page="software"><svg><use href="#list"/></svg> Программы</a>
         <a data-page="forum"><svg><use href="#message-circle"/></svg> Форум</a>
         <a data-page="schedule"><svg><use href="#calendar"/></svg> Расписание</a>
+        <a data-page="upload"><svg><use href="#upload"/></svg> Загрузить</a>
         <a data-page="analysis"><svg><use href="#chart"/></svg> Анализ</a>
         <a data-page="extension"><svg><use href="#puzzle"/></svg> Расширение</a>
         <a data-page="submit"><svg><use href="#plus-circle"/></svg> Предложить</a>
@@ -690,8 +737,47 @@
         <input type="date" id="scheduleDate" class="schedule-input">
         <button id="scheduleLoadBtn" class="schedule-btn">📅 Показать</button>
         <button id="scheduleTodayBtn" class="schedule-btn secondary">Сегодня</button>
+        <button id="scheduleUploadBtn" class="schedule-btn secondary" style="margin-left:auto;">📤 Загрузить расписание</button>
       </div>
       <div id="scheduleContent"></div>
+    </div>
+  </div>
+
+  <!-- ЗАГРУЗКА РАСПИСАНИЯ -->
+  <div class="page" id="page-upload">
+    <div class="container">
+      <div class="page-title"><svg><use href="#upload"/></svg> Загрузить расписание</div>
+      <div class="upload-box">
+        <div id="uploadAuthWarn" class="upload-auth-warn">
+          ⚠️ Для загрузки расписания нужно <a href="#" onclick="document.getElementById('loginBtn').click();return false;" style="color:#991b1b;">войти в аккаунт</a>.
+        </div>
+        <div class="upload-field">
+          <label>Группа</label>
+          <input type="text" id="uploadGroup" list="uploadGroupList" placeholder="Например: КИТ-ИСИП-25-1" autocomplete="off">
+          <datalist id="uploadGroupList"></datalist>
+        </div>
+        <div class="upload-field">
+          <label>Дата</label>
+          <input type="date" id="uploadDate">
+        </div>
+        <div class="upload-field">
+          <label>Файл XLSX</label>
+          <input type="file" id="uploadFile" accept=".xlsx,.xls">
+        </div>
+        <button id="uploadSubmit" class="upload-submit-btn">
+          <svg><use href="#upload"/></svg> Загрузить на сервер
+        </button>
+        <div id="uploadStatus" class="upload-status"></div>
+        <div class="upload-hint">
+          <strong>📋 Требования к XLSX:</strong>
+          <ul>
+            <li>Первая колонка — номер пары (1–10).</li>
+            <li>Далее — предмет, ФИО преподавателя, аудитория, время.</li>
+            <li>Время в формате <code>08:30-10:00</code>.</li>
+            <li>Файл до 15 МБ. Если расписание уже есть на эту дату — оно перезапишется.</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -838,6 +924,7 @@
       forum: document.getElementById('page-forum'),
       'topic-view': document.getElementById('page-topic-view'),
       schedule: document.getElementById('page-schedule'),
+      upload: document.getElementById('page-upload'),
       analysis: document.getElementById('page-analysis'),
       extension: document.getElementById('page-extension'),
       profile: document.getElementById('page-profile'),
@@ -855,6 +942,7 @@
       if (pageId === 'profile') loadProfile();
       if (pageId === 'submissions') loadSubmissions();
       if (pageId === 'schedule') initSchedulePage();
+      if (pageId === 'upload') initUploadPage();
       if (pageId === 'analysis') initAnalysisPage();
       if (pageId === 'topic-view' && params && params.topicId) {
         localStorage.setItem('currentTopicId', params.topicId);
@@ -899,7 +987,6 @@
       }
     }
     window.addEventListener('hashchange', restorePageFromHash);
-    restorePageFromHash();
 
     // ===== ТЕМА =====
     const themeToggle = document.getElementById('themeToggle');
@@ -1441,68 +1528,43 @@
       showPage('submit');
     });
 
+    // ===== СПИСОК ГРУПП =====
+    // Fallback-список групп колледжа (используется, если БД пуста)
+    const FALLBACK_GROUPS = [
+      'КИТ-ТС-26-1','КИТ-ТС-26-2','КИТ-ТС-25-1','КИТ-ТС-25-2','КИТ-ТС-24',
+      'КИТ-СИСА-26-1','КИТ-СИСА-26-2','КИТ-РИС-26','КИТ-РБП-26','КИТ-РМП-26','КИТ-ВР-26',
+      'КИТ-ТЭСИС-26-1','КИТ-ТЭСИС-26-2','КИТ-ТЭСИС-26-3','КИТ-ОИБАС-26',
+      'КИТ-ИССС-26-1','КИТ-ИССС-26-2','КИТ-СИСА-25-1','КИТ-СИСА-25-2',
+      'КИТ-ИСИП-25-1','КИТ-ИСИП-25-2','КИТ-ИСИП-25-3','КИТ-ИСИП-25-4','КИТ-ИСИП-25-5','КИТ-ИСИП-25-6',
+      'КИТ-ОИБАС-25','КИТ-ИССС-25',
+      'КИТ-СИСА-24-1','КИТ-СИСА-24-2',
+      'КИТ-ИСИП-24-1','КИТ-ИСИП-24-2','КИТ-ИСИП-24-3','КИТ-ИСИП-24-4','КИТ-ИСИП-24-5','КИТ-ИСИП-24-6',
+      'КИТ-ОИБАС-24','КИТ-ИССС-24'
+    ];
+
+    async function fetchGroups() {
+      try {
+        const res = await fetch('/api/schedule/groups');
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) return data;
+      } catch (e) {
+        console.warn('Не удалось загрузить группы с сервера, использую fallback', e);
+      }
+      return FALLBACK_GROUPS;
+    }
+
+    function fillSelect(selectEl, groups) {
+      selectEl.innerHTML = '<option value="">Выберите группу</option>' +
+        groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    }
+
     // ===== РАСПИСАНИЕ =====
     let scheduleGroupsLoaded = false;
 
-    // Fallback-список групп колледжа
-    const FALLBACK_GROUPS = [
-      'КИТ-ТС-26-1',
-      'КИТ-ТС-26-2',
-      'КИТ-ТС-25-1',
-      'КИТ-ТС-25-2',
-      'КИТ-ТС-24',
-      'КИТ-СИСА-26-1',
-      'КИТ-СИСА-26-2',
-      'КИТ-РИС-26',
-      'КИТ-РБП-26',
-      'КИТ-РМП-26',
-      'КИТ-ВР-26',
-      'КИТ-ТЭСИС-26-1',
-      'КИТ-ТЭСИС-26-2',
-      'КИТ-ТЭСИС-26-3',
-      'КИТ-ОИБАС-26',
-      'КИТ-ИССС-26-1',
-      'КИТ-ИССС-26-2',
-      'КИТ-СИСА-25-1',
-      'КИТ-СИСА-25-2',
-      'КИТ-ИСИП-25-1',
-      'КИТ-ИСИП-25-2',
-      'КИТ-ИСИП-25-3',
-      'КИТ-ИСИП-25-4',
-      'КИТ-ИСИП-25-5',
-      'КИТ-ИСИП-25-6',
-      'КИТ-ОИБАС-25',
-      'КИТ-ИССС-25',
-      'КИТ-СИСА-24-1',
-      'КИТ-СИСА-24-2',
-      'КИТ-ИСИП-24-1',
-      'КИТ-ИСИП-24-2',
-      'КИТ-ИСИП-24-3',
-      'КИТ-ИСИП-24-4',
-      'КИТ-ИСИП-24-5',
-      'КИТ-ИСИП-24-6',
-      'КИТ-ОИБАС-24',
-      'КИТ-ИССС-24'
-    ];
-
     async function initSchedulePage() {
       if (!scheduleGroupsLoaded) {
-        let groups = null;
-        try {
-          const res = await fetch('/api/groups');
-          groups = await res.json();
-        } catch (e) {
-          console.warn('Ошибка загрузки групп, использую fallback', e);
-        }
-
-        if (!Array.isArray(groups) || groups.length === 0) {
-          groups = FALLBACK_GROUPS;
-          console.warn('API вернул пустой список — показываю fallback-группы');
-        }
-
-        const sel = document.getElementById('scheduleGroup');
-        sel.innerHTML = '<option value="">Выберите группу</option>' +
-          groups.map(g => `<option value="${g}">${g}</option>`).join('');
+        const groups = await fetchGroups();
+        fillSelect(document.getElementById('scheduleGroup'), groups);
         scheduleGroupsLoaded = true;
       }
 
@@ -1515,6 +1577,14 @@
       document.getElementById('scheduleTodayBtn').onclick = () => {
         dateInput.value = new Date().toISOString().slice(0, 10);
         loadSchedule();
+      };
+      document.getElementById('scheduleUploadBtn').onclick = () => {
+        if (!currentUser) {
+          showToast('Войдите, чтобы загрузить расписание', 'error');
+          document.getElementById('loginBtn').click();
+          return;
+        }
+        showPage('upload');
       };
     }
 
@@ -1531,7 +1601,6 @@
         const res = await fetch(`/api/schedule?group=${encodeURIComponent(group)}&date=${date}`);
         const data = await res.json();
 
-        // Если API вернул ошибку — показываем её прямо на странице
         if (!res.ok || data.error) {
           container.innerHTML = `
             <div class="schedule-day-header" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
@@ -1541,17 +1610,7 @@
               </div>
               <div class="schedule-day-count">⚠️</div>
             </div>
-            <div class="empty-day">
-              <div class="empty-day-icon">🔌</div>
-              <div class="empty-day-text">
-                Проверь:<br>
-                1) <a href="/api/schedule/debug" target="_blank">/api/schedule/debug</a> — что видит сервер<br>
-                2) <a href="/api/schedule/raw" target="_blank">/api/schedule/raw</a> — структура XLSX<br>
-                3) Логи Vercel
-              </div>
-            </div>
           `;
-          console.error('API error:', data);
           return;
         }
 
@@ -1570,7 +1629,6 @@
     function renderSchedule(data) {
       const container = document.getElementById('scheduleContent');
 
-      // Защита от undefined
       const dayName = data.dayName || '—';
       const group = data.group || '—';
       let dateStr = '—';
@@ -1591,7 +1649,7 @@
           </div>
           <div class="empty-day">
             <div class="empty-day-icon">🎉</div>
-            <div class="empty-day-text">В этот день пар нет — можно отдохнуть!</div>
+            <div class="empty-day-text">В этот день пар нет — можно отдохнуть!<br><small style="opacity:0.7;">Возможно, расписание ещё не загружено.</small></div>
           </div>
         `;
         return;
@@ -1623,26 +1681,114 @@
       `;
     }
 
+    // ===== ЗАГРУЗКА XLSX =====
+    let uploadGroupsLoaded = false;
+
+    async function initUploadPage() {
+      // Обновляем состояние авторизации
+      const warn = document.getElementById('uploadAuthWarn');
+      const form = document.querySelector('.upload-box');
+      if (!currentUser) {
+        warn.classList.add('show');
+      } else {
+        warn.classList.remove('show');
+      }
+
+      if (!uploadGroupsLoaded) {
+        const groups = await fetchGroups();
+        const dl = document.getElementById('uploadGroupList');
+        dl.innerHTML = groups.map(g => `<option value="${g}">`).join('');
+        uploadGroupsLoaded = true;
+      }
+
+      const dateInput = document.getElementById('uploadDate');
+      if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+      // Сбрасываем статус
+      const status = document.getElementById('uploadStatus');
+      status.className = 'upload-status';
+      status.textContent = '';
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          const comma = result.indexOf(',');
+          resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setUploadStatus(text, kind) {
+      const el = document.getElementById('uploadStatus');
+      el.className = 'upload-status show ' + (kind || 'info');
+      el.innerHTML = text;
+    }
+
+    document.getElementById('uploadSubmit').addEventListener('click', async function() {
+      if (!currentUser) {
+        showToast('Войдите, чтобы загрузить расписание', 'error');
+        document.getElementById('loginBtn').click();
+        return;
+      }
+      const group = document.getElementById('uploadGroup').value.trim();
+      const date = document.getElementById('uploadDate').value;
+      const fileInput = document.getElementById('uploadFile');
+      const file = fileInput.files && fileInput.files[0];
+
+      if (!group) { showToast('Укажите группу', 'error'); return; }
+      if (!date) { showToast('Укажите дату', 'error'); return; }
+      if (!file) { showToast('Выберите XLSX-файл', 'error'); return; }
+      if (!/\.(xlsx|xls)$/i.test(file.name)) { showToast('Файл должен быть .xlsx или .xls', 'error'); return; }
+      if (file.size > 15 * 1024 * 1024) { showToast('Файл слишком большой (макс. 15 МБ)', 'error'); return; }
+
+      const btn = this;
+      btn.disabled = true;
+      setUploadStatus('⏳ Читаем файл...', 'info');
+
+      try {
+        const base64 = await fileToBase64(file);
+        setUploadStatus('⏳ Отправляем на сервер...', 'info');
+
+        const res = await fetch('/api/schedule/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ group, date, filename: file.name, data: base64 })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          setUploadStatus(`✅ Готово! Сохранено <b>${data.saved}</b> ${declOfNum(data.saved, ['пара','пары','пар'])} для <b>${escapeHtml(data.group)}</b> на <b>${escapeHtml(data.date)}</b>.`, 'ok');
+          showToast(`Загружено ${data.saved} ${declOfNum(data.saved, ['пара','пары','пар'])}!`, 'success');
+          fileInput.value = '';
+          // Обновляем список групп на страницах расписания/анализа
+          scheduleGroupsLoaded = false;
+          analysisGroupsLoaded = false;
+          uploadGroupsLoaded = false;
+        } else {
+          setUploadStatus(`❌ ${escapeHtml(data.error || 'Ошибка загрузки')}${data.details ? '<br><small>' + escapeHtml(data.details) + '</small>' : ''}`, 'err');
+          showToast(data.error || 'Ошибка загрузки', 'error');
+        }
+      } catch (e) {
+        console.error(e);
+        setUploadStatus('❌ ' + escapeHtml(e.message || 'Ошибка'), 'err');
+        showToast('Ошибка загрузки', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     // ===== АНАЛИЗ =====
     let analysisGroupsLoaded = false;
 
     async function initAnalysisPage() {
       if (!analysisGroupsLoaded) {
-        let groups = null;
-        try {
-          const res = await fetch('/api/groups');
-          groups = await res.json();
-        } catch (e) {
-          console.warn('Ошибка загрузки групп, использую fallback', e);
-        }
-
-        if (!Array.isArray(groups) || groups.length === 0) {
-          groups = FALLBACK_GROUPS;
-        }
-
-        const sel = document.getElementById('analysisGroup');
-        sel.innerHTML = '<option value="">Выберите группу</option>' +
-          groups.map(g => `<option value="${g}">${g}</option>`).join('');
+        const groups = await fetchGroups();
+        fillSelect(document.getElementById('analysisGroup'), groups);
         analysisGroupsLoaded = true;
       }
       document.getElementById('analysisLoadBtn').onclick = loadAnalysis;
@@ -1751,6 +1897,8 @@
           showToast('Регистрация успешна!', 'success');
           loadSoftware();
           loadTopics();
+          // Если открыта страница загрузки — обновим состояние
+          if (document.getElementById('page-upload').classList.contains('active')) initUploadPage();
         } else showToast(data.error || 'Ошибка регистрации', 'error');
       } catch(e) { showToast('Ошибка сервера', 'error'); }
     });
@@ -1769,14 +1917,18 @@
           showToast('Вход выполнен!', 'success');
           loadSoftware();
           loadTopics();
+          if (document.getElementById('page-upload').classList.contains('active')) initUploadPage();
         } else showToast(data.error || 'Ошибка входа', 'error');
       } catch(e) { showToast('Ошибка сервера', 'error'); }
     });
 
     // ===== ИНИЦИАЛИЗАЦИЯ =====
-    checkAuth();
-    loadSoftware();
-    loadTopics();
+    (async () => {
+      await checkAuth();
+      restorePageFromHash();
+      loadSoftware();
+      loadTopics();
+    })();
   })();
 </script>
 </body>
