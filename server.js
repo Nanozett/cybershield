@@ -481,83 +481,131 @@ app.post('/api/submissions/:id/approve', async (req, res) => {
   } catch { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-// ===== РАСПИСАНИЕ — парсинг XLSX =====
-function parseScheduleRows(rows) {
+// ===================================================================
+// ===== РАСПИСАНИЕ — новый парсер под реальную структуру XLSX =====
+// ===================================================================
+
+// Номер пары по времени старта. Слоты: 1=08:00, 2=09:50, 3=11:40, 4=14:00, 5=15:50, 6=17:40.
+// Сдвоенные (10:40, 12:30, 14:50) округляем к ближайшему слоту.
+function startTimeToSlot(startTime) {
+  const m = String(startTime).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return 0;
+  const minutes = Number(m[1]) * 60 + Number(m[2]);
+  const slots = [480, 590, 700, 840, 950, 1060]; // 08:00, 09:50, 11:40, 14:00, 15:50, 17:40
+  let best = 1, bestDist = Infinity;
+  for (let i = 0; i < slots.length; i++) {
+    const d = Math.abs(minutes - slots[i]);
+    if (d < bestDist) { bestDist = d; best = i + 1; }
+  }
+  return best;
+}
+
+// Из даты "2026-09-26" делает имя листа "260926" (DDMMYY)
+function dateToSheetName(dateStr) {
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return `${d}${mo}${y.slice(2)}`;
+}
+
+// Парсит лист XLSX и возвращает пары только для указанной группы.
+function parseScheduleRows(rows, targetGroup) {
   const pairs = [];
+  let collecting = false;
+  const DAY_ABBRS = /^(СБ|ПН|ВТ|СР|ЧТ|ПТ|ВС)$/i;
+  const TIME_RANGE = /^\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}$/;
+  const target = targetGroup ? String(targetGroup).toLowerCase().trim() : null;
+
   for (const row of rows) {
-    if (!row || !row.length) continue;
-    const first = String(row[0] || '').trim();
-    const pairNum = parseInt(first, 10);
-    if (!pairNum || pairNum < 1 || pairNum > 10) continue;
+    if (!row) continue;
+    const A = String(row[0] || '').trim();
+    const B = String(row[1] || '').trim();
+    const C = String(row[2] || '').trim();
+    const E = String(row[4] || '').trim();
+    const F = String(row[5] || '').trim();
 
-    const cells = row.slice(1).map(c => String(c || '').trim()).filter(Boolean);
-    const line = cells.join(' | ');
-    if (!line) continue;
-
-    let subject = '', teacher = '', room = '', startTime = '', endTime = '';
-
-    const tm = line.match(/(\d{1,2}[:.]\d{2})\s*[-–—]\s*(\d{1,2}[:.]\d{2})/);
-    if (tm) { startTime = tm[1].replace('.', ':'); endTime = tm[2].replace('.', ':'); }
-
-    const rm = line.match(/(?:ауд\.?|каб\.?|аудитория)\s*([\w\-/А-Яа-я]+)/i);
-    if (rm) room = rm[1];
-
-    for (const c of cells) {
-      if (/^\d{1,2}[:.]\d{2}/.test(c)) continue;
-      if (/^(ауд|каб)/i.test(c)) continue;
-      if (/^[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\./.test(c)) continue;
-      subject = c;
-      break;
+    // Строки, где A заполнена, а B пуста — заголовки/маркеры
+    if (A && !B && !DAY_ABBRS.test(A)) {
+      if (/^Расписани/i.test(A)) continue;      // "Расписания учебных занятий ..."
+      if (/^Курс\s+\d+/i.test(A)) continue;      // "Курс 2", "Курс 3"
+      if (!target) continue;
+      // Проверяем: начинается ли строка с выбранной группы
+      if (A.toLowerCase().startsWith(target)) {
+        collecting = true;
+      } else if (/СТУДЕНТ/i.test(A)) {
+        // Другая группа началась — прекращаем сбор
+        collecting = false;
+      }
+      continue;
     }
 
-    for (const c of cells) {
-      if (/^[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\./.test(c)) { teacher = c; break; }
-    }
+    // Строка с парой: B = "08:00-09:35"
+    if (!TIME_RANGE.test(B)) continue;
+    if (!collecting) continue;
+    if (!C) continue; // пустая дисциплина (окно) — пропускаем
+
+    const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
+    if (!tm) continue;
+    const startTime = `${tm[1].padStart(2,'0')}:${tm[2]}`;
+    const endTime = `${tm[3].padStart(2,'0')}:${tm[4]}`;
 
     pairs.push({
-      pair_number: pairNum,
-      subject: subject || '—',
-      teacher: teacher || '—',
-      room: room || '—',
-      start_time: startTime || '—',
-      end_time: endTime || '—'
+      pair_number: startTimeToSlot(startTime),
+      subject: C,
+      teacher: E || '—',
+      room: F || '—',
+      start_time: startTime,
+      end_time: endTime
     });
   }
   return pairs;
 }
 
-// Загрузка XLSX (base64) — доступна любому авторизованному пользователю
 app.post('/api/schedule/upload', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Требуется авторизация' });
   const { group, date, filename, data } = req.body;
   if (!group || !date || !data) return res.status(400).json({ error: 'Нужны group, date и файл' });
-
-  // Валидация даты
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Дата должна быть в формате YYYY-MM-DD' });
 
   try {
     const clean = data.replace(/^data:.*?;base64,/, '');
     const buffer = Buffer.from(clean, 'base64');
-
     if (buffer.length > 15 * 1024 * 1024) return res.status(400).json({ error: 'Файл больше 15 МБ' });
     if (buffer.length < 100) return res.status(400).json({ error: 'Файл пустой или повреждён' });
 
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     console.log('📄 Листы XLSX:', workbook.SheetNames);
+    console.log('📌 Ищем группу:', group, '| Дата:', date);
+
+    // Пытаемся найти лист под нужную дату (имя вида "260926")
+    const expected = dateToSheetName(date);
+    let targetSheet = null;
+    if (expected) {
+      targetSheet = workbook.SheetNames.find(s => s === expected)
+        || workbook.SheetNames.find(s => s.includes(expected))
+        || workbook.SheetNames.find(s => s.replace(/\D/g, '') === expected);
+    }
+    const sheetsToParse = targetSheet ? [targetSheet] : workbook.SheetNames;
+    console.log('📄 Парсим листы:', sheetsToParse, targetSheet ? '(точное совпадение по дате ✅)' : '(дата не найдена в именах листов — парсим все ⚠️)');
 
     let allPairs = [];
-    for (const sheetName of workbook.SheetNames) {
+    for (const sheetName of sheetsToParse) {
       const sheet = workbook.Sheets[sheetName];
+      if (!sheet) continue;
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const pairs = parseScheduleRows(rows);
+      const pairs = parseScheduleRows(rows, group);
+      if (pairs.length > 0) console.log(`  ✅ Лист ${sheetName}: ${pairs.length} пар для ${group}`);
+      else console.log(`  ⚠️ Лист ${sheetName}: пар для ${group} не найдено`);
       allPairs = allPairs.concat(pairs);
     }
 
     if (allPairs.length === 0) {
-      return res.status(400).json({ error: 'Не удалось найти пары в файле. Проверь структуру XLSX (первая колонка — номер пары 1-10).' });
+      return res.status(400).json({
+        error: `В файле не найдена группа «${group}» на дату ${date}. Листы в файле: ${workbook.SheetNames.join(', ')}. Проверь, что группа в расписании написана так же, как в списке (например «КИТ-ОИБАС-26»).`
+      });
     }
 
-    // Удаляем старые записи для этой группы и даты (перезапись)
+    // Перезаписываем расписание для этой группы/даты
     await dbRun('DELETE FROM schedule WHERE group_name = ? AND date = ?', [group, date]);
 
     for (const p of allPairs) {
@@ -604,7 +652,7 @@ app.get('/api/schedule', async (req, res) => {
     const dow = jsDay === 0 ? 7 : jsDay;
 
     const pairs = await dbAll(
-      'SELECT * FROM schedule WHERE group_name = ? AND date = ? ORDER BY pair_number',
+      'SELECT * FROM schedule WHERE group_name = ? AND date = ? ORDER BY pair_number, start_time',
       [group, date]
     );
 
