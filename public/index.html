@@ -336,7 +336,7 @@
         <a data-page="software"><svg><use href="#list"/></svg> Программы</a>
         <a data-page="forum"><svg><use href="#message-circle"/></svg> Форум</a>
         <a data-page="schedule"><svg><use href="#calendar"/></svg> Расписание</a>
-        <a data-page="upload"><svg><use href="#upload"/></svg> Загрузить</a>
+        <a data-page="upload" id="uploadNavLink" style="display:none;"><svg><use href="#upload"/></svg> Загрузить</a>
         <a data-page="analysis"><svg><use href="#chart"/></svg> Анализ</a>
         <a data-page="extension"><svg><use href="#puzzle"/></svg> Расширение</a>
         <a data-page="submit"><svg><use href="#plus-circle"/></svg> Предложить</a>
@@ -657,6 +657,11 @@
     };
 
     function showPage(pageId, params) {
+      // Защита страницы загрузки: только для модераторов
+      if (pageId === 'upload' && currentRole !== 'moderator') {
+        showToast('Загрузка расписания доступна только модераторам', 'error');
+        pageId = 'home';
+      }
       Object.keys(pages).forEach(key => {
         pages[key].classList.toggle('active', key === pageId);
       });
@@ -768,6 +773,12 @@
         updatedRegisterBtn.innerHTML = `<svg><use href="#user-plus"/></svg> Регистрация`;
         updatedRegisterBtn.className = 'register-btn';
         updatedRegisterBtn.onclick = () => openModal(registerModal);
+      }
+
+      // Показываем пункт «Загрузить» только модераторам
+      const uploadLink = document.getElementById('uploadNavLink');
+      if (uploadLink) {
+        uploadLink.style.display = (isAuth && currentRole === 'moderator') ? 'inline-flex' : 'none';
       }
     }
 
@@ -1309,6 +1320,8 @@
         loadSchedule();
       };
       document.getElementById('scheduleUploadBtn').onclick = () => {
+              const uploadBtn = document.getElementById('scheduleUploadBtn');
+      if (uploadBtn) uploadBtn.style.display = currentRole === 'moderator' ? '' : 'none';
         if (!currentUser) {
           showToast('Войдите, чтобы загрузить расписание', 'error');
           document.getElementById('loginBtn').click();

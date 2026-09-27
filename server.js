@@ -586,7 +586,9 @@ function parseScheduleSheet(rows) {
 
 // ===== ЗАГРУЗКА РАСПИСАНИЯ (все группы сразу) =====
 app.post('/api/schedule/upload', async (req, res) => {
+  app.post('/api/schedule/upload', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Требуется авторизация' });
+  if (req.session.role !== 'moderator') return res.status(403).json({ error: 'Загружать расписание может только модератор' });
   const { date, filename, data } = req.body;
   if (!date || !data) return res.status(400).json({ error: 'Нужны date и файл' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Дата в формате YYYY-MM-DD' });
