@@ -184,7 +184,6 @@
     .hero-stats .number { font-size:36px; font-weight:700; color:var(--accent); line-height:1; }
     .hero-stats .label { font-size:14px; opacity:0.7; margin-top:4px; }
 
-    /* Рекламный баннер расширения */
     .extension-promo {
       background: linear-gradient(135deg, #1a2e44, #0b1a2e);
       border-radius: 30px;
@@ -207,7 +206,6 @@
     .extension-promo-btn:hover { background:var(--accent-hover); transform:translateY(-4px) scale(1.03); box-shadow:0 10px 0 #1a335a; }
     .extension-promo-btn svg { width:24px; height:24px; }
 
-    /* Преимущества */
     .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:30px; margin-top:20px; }
     .feature-item { background:var(--bg-card); padding:36px 24px 30px; border-radius:28px; text-align:center; box-shadow:var(--shadow); border:1px solid var(--border-color); transition:all 0.3s; cursor:default; }
     .feature-item:hover { transform:translateY(-10px) scale(1.02); box-shadow:var(--shadow-hover); }
@@ -217,7 +215,6 @@
     .feature-item h3 { font-size:20px; margin-bottom:10px; }
     .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
 
-    /* Остальные стили */
     .methods-grid .method-card,
     .software-grid .software-card,
     .forum-topic {
@@ -1452,16 +1449,36 @@
     // ===== РАСПИСАНИЕ =====
     let scheduleGroupsLoaded = false;
 
+    // === FALLBACK-СПИСОК ГРУПП КОЛЛЕДЖА ===
+    // Используется, если API не вернул ни одной группы (например, XLSX ещё не распарсен)
+    const FALLBACK_GROUPS = [
+      'ОИБАС-22-1', 'ОИБАС-22-2', 'ОИБАС-21-1', 'ОИБАС-21-2',
+      'ИСИП-24-1', 'ИСИП-23-1', 'ИСИП-22-1', 'ИСИП-21-1',
+      'СИСА-22-1', 'СИСА-22-2', 'СИСА-22-3',
+      'ИССС-22-1', 'ИССС-22-2',
+      'ТС-22-1',
+      'СП-22'
+    ];
+
     async function initSchedulePage() {
       if (!scheduleGroupsLoaded) {
+        let groups = null;
         try {
           const res = await fetch('/api/groups');
-          const groups = await res.json();
-          const sel = document.getElementById('scheduleGroup');
-          sel.innerHTML = '<option value="">Выберите группу</option>' +
-            groups.map(g => `<option value="${g}">${g}</option>`).join('');
-          scheduleGroupsLoaded = true;
-        } catch (e) { console.error('Ошибка загрузки групп', e); }
+          groups = await res.json();
+        } catch (e) {
+          console.warn('Ошибка загрузки групп, использую fallback', e);
+        }
+
+        if (!Array.isArray(groups) || groups.length === 0) {
+          groups = FALLBACK_GROUPS;
+          console.warn('API вернул пустой список — показываю fallback-группы');
+        }
+
+        const sel = document.getElementById('scheduleGroup');
+        sel.innerHTML = '<option value="">Выберите группу</option>' +
+          groups.map(g => `<option value="${g}">${g}</option>`).join('');
+        scheduleGroupsLoaded = true;
       }
 
       const dateInput = document.getElementById('scheduleDate');
@@ -1545,14 +1562,22 @@
 
     async function initAnalysisPage() {
       if (!analysisGroupsLoaded) {
+        let groups = null;
         try {
           const res = await fetch('/api/groups');
-          const groups = await res.json();
-          const sel = document.getElementById('analysisGroup');
-          sel.innerHTML = '<option value="">Выберите группу</option>' +
-            groups.map(g => `<option value="${g}">${g}</option>`).join('');
-          analysisGroupsLoaded = true;
-        } catch (e) { console.error('Ошибка загрузки групп', e); }
+          groups = await res.json();
+        } catch (e) {
+          console.warn('Ошибка загрузки групп, использую fallback', e);
+        }
+
+        if (!Array.isArray(groups) || groups.length === 0) {
+          groups = FALLBACK_GROUPS;
+        }
+
+        const sel = document.getElementById('analysisGroup');
+        sel.innerHTML = '<option value="">Выберите группу</option>' +
+          groups.map(g => `<option value="${g}">${g}</option>`).join('');
+        analysisGroupsLoaded = true;
       }
       document.getElementById('analysisLoadBtn').onclick = loadAnalysis;
     }

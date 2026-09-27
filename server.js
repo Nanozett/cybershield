@@ -89,15 +89,16 @@ async function dbRun(sql, args = []) {
 const YANDEX_PUBLIC_KEY = 'eSjfjNM06Zcyzwqv5124yiPegnqahzm72s0qoIz-cKg6Y1haOWRpYXFSZw';
 const YANDEX_DOWNLOAD_API = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${YANDEX_PUBLIC_KEY}`;
 
-// Кэш расписания в памяти
+// Кэш расписания
 let scheduleCache = {
-  data: null,          // { groups: [...], schedule: {...} }
-  rawRows: null,       // сырые данные для отладки
+  data: null,
+  rawRows: null,
+  debug: null,
   lastUpdate: 0
 };
 const SCHEDULE_CACHE_TTL = 60 * 60 * 1000; // 1 час
 
-// ===== Парсинг XLSX =====
+// ===== Словарь дней недели =====
 const DAY_NAME_TO_NUM = {
   'понедельник': 1, 'пн': 1, 'monday': 1, 'mon': 1,
   'вторник': 2, 'вт': 2, 'tuesday': 2, 'tue': 2,
@@ -108,25 +109,22 @@ const DAY_NAME_TO_NUM = {
   'воскресенье': 7, 'вс': 7, 'sunday': 7, 'sun': 7
 };
 
-// Парсит одну ячейку с парой: предмет, преподаватель, аудитория, время
+// ===== Парсинг одной ячейки с парой =====
 function parsePairCell(text) {
   const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return null;
 
   let subject = '', teacher = '', room = '', startTime = '', endTime = '';
 
-  // Время вида 08:30-10:00
   const timeMatch = String(text).match(/(\d{1,2}[:.]\d{2})\s*[-–—]\s*(\d{1,2}[:.]\d{2})/);
   if (timeMatch) {
     startTime = timeMatch[1].replace('.', ':');
     endTime = timeMatch[2].replace('.', ':');
   }
 
-  // Аудитория вида "ауд. 305", "каб. 412", "А-305"
   const roomMatch = String(text).match(/(?:ауд\.?|каб\.?|аудитория)\s*([\w\-/А-Яа-я]+)/i);
   if (roomMatch) room = roomMatch[1];
 
-  // Первая «нормальная» строка — предмет (не время, не аудитория)
   for (const line of lines) {
     if (!/^\d{1,2}[:.]\d{2}/.test(line) && !/^ауд/i.test(line) && !/^каб/i.test(line)) {
       subject = line;
@@ -134,7 +132,6 @@ function parsePairCell(text) {
     }
   }
 
-  // Преподаватель — ФИО с инициалами или полное ФИО
   for (const line of lines) {
     if (line === subject) continue;
     if (/^[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\./.test(line)) {
@@ -161,13 +158,10 @@ function parsePairCell(text) {
   };
 }
 
-// Автоматически находит в листе столбцы дней недели и строки с парами
-function parseSheet(sheetName, sheet) {
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-  // 1) Ищем строку-заголовок с днями недели
+// ===== Стратегия A: дни недели в столбцах, номера пар в первом столбце =====
+function parseSheetStrategyA(sheetName, rows) {
   let headerRowIdx = -1;
-  const dayCols = {}; // { colIdx: dayNum }
+  const dayCols = {};
 
   for (let i = 0; i < rows.length && headerRowIdx === -1; i++) {
     const row = rows[i];
@@ -189,11 +183,8 @@ function parseSheet(sheetName, sheet) {
     }
   }
 
-  if (headerRowIdx === -1) {
-    return { group: sheetName.trim(), pairs: [], note: 'Заголовки дней не найдены' };
-  }
+  if (headerRowIdx === -1) return null;
 
-  // 2) Идём по строкам ниже — это пары. Номер пары = первая ячейка.
   const pairs = [];
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -223,50 +214,155 @@ function parseSheet(sheetName, sheet) {
     }
   }
 
-  return { group: sheetName.trim(), pairs };
+  return pairs;
+}
+
+// ===== Стратегия B: таблица с колонками Группа / День / Пара / Предмет / ... =====
+function parseSheetStrategyB(rows) {
+  const KEYWORDS = {
+    group: ['группа', 'group', 'поток'],
+    day: ['день', 'дня', 'дню', 'day', 'дни'],
+    pair: ['пара', 'номер пары', '№ пары', 'pair'],
+    subject: ['предмет', 'дисциплина', 'subject', 'название'],
+    teacher: ['преподаватель', 'учитель', 'teacher', 'фио', 'препод'],
+    room: ['аудитория', 'кабинет', 'room', 'ауд'],
+    time: ['время', 'time', 'часы']
+  };
+
+  let headerIdx = -1;
+  const colMap = {};
+
+  for (let i = 0; i < rows.length && headerIdx === -1; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const detected = {};
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toLowerCase().trim();
+      for (const [role, keys] of Object.entries(KEYWORDS)) {
+        if (keys.some(k => cell.includes(k))) {
+          if (detected[role] === undefined) detected[role] = j;
+          break;
+        }
+      }
+    }
+    if (detected.group !== undefined && detected.day !== undefined && detected.subject !== undefined) {
+      headerIdx = i;
+      Object.assign(colMap, detected);
+    }
+  }
+
+  if (headerIdx === -1) return null;
+
+  const groupsMap = {};
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const groupName = String(row[colMap.group] || '').trim();
+    const dayStr = String(row[colMap.day] || '').toLowerCase().trim();
+
+    if (!groupName || !dayStr) continue;
+
+    let dayNum = null;
+    for (const [key, num] of Object.entries(DAY_NAME_TO_NUM)) {
+      if (dayStr === key || dayStr.includes(key)) { dayNum = num; break; }
+    }
+    if (!dayNum) continue;
+
+    const pairNumRaw = colMap.pair !== undefined ? parseInt(String(row[colMap.pair] || '').trim(), 10) : null;
+    const pairNum = pairNumRaw && !isNaN(pairNumRaw) ? pairNumRaw : 0;
+    const subject = String(row[colMap.subject] || '').trim();
+    const teacher = colMap.teacher !== undefined ? String(row[colMap.teacher] || '').trim() : 'Не указан';
+    const room = colMap.room !== undefined ? String(row[colMap.room] || '').trim() : '—';
+    const timeStr = colMap.time !== undefined ? String(row[colMap.time] || '').trim() : '';
+
+    let startTime = '', endTime = '';
+    if (timeStr) {
+      const m = timeStr.match(/(\d{1,2}[:.]\d{2})\s*[-–—]\s*(\d{1,2}[:.]\d{2})/);
+      if (m) { startTime = m[1].replace('.', ':'); endTime = m[2].replace('.', ':'); }
+    }
+
+    if (!groupsMap[groupName]) groupsMap[groupName] = [];
+    groupsMap[groupName].push({
+      day_of_week: dayNum,
+      pair_number: pairNum,
+      subject: subject || '—',
+      teacher: teacher || 'Не указан',
+      room: room || '—',
+      start_time: startTime || '—',
+      end_time: endTime || '—'
+    });
+  }
+
+  if (Object.keys(groupsMap).length === 0) return null;
+  return groupsMap;
 }
 
 // ===== Загрузка и парсинг XLSX =====
 async function fetchScheduleFromYandex() {
   console.log('📥 Загрузка расписания с Яндекс.Диска...');
 
-  // 1. Прямая ссылка через API Яндекс.Диска
   const metaRes = await fetch(YANDEX_DOWNLOAD_API);
   if (!metaRes.ok) throw new Error(`Яндекс API: ${metaRes.status}`);
   const meta = await metaRes.json();
   if (!meta.href) throw new Error('Нет поля href в ответе Яндекс.Диска');
 
-  // 2. Скачиваем файл
   const fileRes = await fetch(meta.href);
   if (!fileRes.ok) throw new Error(`Не удалось скачать файл: ${fileRes.status}`);
   const arrayBuffer = await fileRes.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // 3. Парсим XLSX
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   console.log('📄 Листы:', workbook.SheetNames);
 
-  // 4. Сырые данные для отладки (/api/schedule/raw)
+  // Собираем сырые данные для отладки
   const rawRows = [];
+  const debug = { sheets: [] };
+
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    rawRows.push({ sheetName, rows: rows.slice(0, 30) });
+    rawRows.push({ sheetName, rows: rows.slice(0, 50) });
+    debug.sheets.push({
+      name: sheetName,
+      totalRows: rows.length,
+      firstRows: rows.slice(0, 15)
+    });
   }
 
-  // 5. Парсим каждую страницу как группу
   const groups = [];
-  const schedule = {}; // { groupName: [pairs] }
+  const schedule = {};
 
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    const parsed = parseSheet(sheetName, sheet);
-    groups.push(parsed.group);
-    schedule[parsed.group] = parsed.pairs;
-    console.log(`  → ${parsed.group}: ${parsed.pairs.length} пар`);
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    // Стратегия A
+    const strategyA = parseSheetStrategyA(sheetName, rows);
+    if (strategyA && strategyA.length > 0) {
+      groups.push(sheetName.trim());
+      schedule[sheetName.trim()] = strategyA;
+      console.log(`  ✅ A → ${sheetName}: ${strategyA.length} пар`);
+      continue;
+    }
+
+    // Стратегия B
+    const strategyB = parseSheetStrategyB(rows);
+    if (strategyB) {
+      for (const [g, pairs] of Object.entries(strategyB)) {
+        if (!groups.includes(g)) groups.push(g);
+        schedule[g] = (schedule[g] || []).concat(pairs);
+      }
+      console.log(`  ✅ B → ${sheetName}: ${Object.keys(strategyB).length} групп`);
+      continue;
+    }
+
+    // Не распарсили — оставляем имя листа как группу с пустым массивом
+    console.warn(`  ⚠️ Не распарсили лист "${sheetName}" (${rows.length} строк)`);
+    groups.push(sheetName.trim());
+    schedule[sheetName.trim()] = [];
   }
 
-  return { groups, schedule, rawRows };
+  return { groups, schedule, rawRows, debug };
 }
 
 // ===== Обновление кэша =====
@@ -279,6 +375,7 @@ async function updateScheduleCache(force = false) {
     const fresh = await fetchScheduleFromYandex();
     scheduleCache.data = { groups: fresh.groups, schedule: fresh.schedule };
     scheduleCache.rawRows = fresh.rawRows;
+    scheduleCache.debug = fresh.debug;
     scheduleCache.lastUpdate = now;
     console.log('✅ Расписание обновлено');
     return scheduleCache.data;
@@ -372,7 +469,7 @@ function ensureDBReady() {
   return dbInitPromise;
 }
 
-// ===== Кастомный Store для express-session на Turso =====
+// ===== Store сессий =====
 class TursoStore extends session.Store {
   get(sid, callback) {
     ensureDBReady()
@@ -388,7 +485,6 @@ class TursoStore extends session.Store {
       })
       .catch(err => callback(err));
   }
-
   set(sid, sess, callback) {
     ensureDBReady()
       .then(() => {
@@ -403,14 +499,12 @@ class TursoStore extends session.Store {
       .then(() => callback(null))
       .catch(err => callback(err));
   }
-
   destroy(sid, callback) {
     ensureDBReady()
       .then(() => dbRun('DELETE FROM sessions WHERE sid = ?', [sid]))
       .then(() => callback(null))
       .catch(err => callback(err));
   }
-
   touch(sid, sess, callback) {
     ensureDBReady()
       .then(() => {
@@ -448,24 +542,15 @@ const LEGITIMATE_BRANDS = [
 const DYNAMIC_HOSTING_PLATFORMS = [
   'jugem.jp',
   'blogspot.com', 'blogspot.nl', 'blogspot.ru', 'blogspot.de', 'blogspot.co.uk',
-  'weebly.com',
-  'livejournal.com',
-  'ucoz.com', 'ucoz.ru',
-  'homelinux.org',
+  'weebly.com', 'livejournal.com',
+  'ucoz.com', 'ucoz.ru', 'homelinux.org',
   'freedomain.thehost.com.ua',
   'byethost.com', 'byethost16.com', 'byethost7.com',
-  '000webhostapp.com',
-  'herokuapp.com',
-  'github.io',
-  'netlify.app',
-  'pages.dev',
-  'glitch.me',
-  'repl.co'
+  '000webhostapp.com', 'herokuapp.com', 'github.io',
+  'netlify.app', 'pages.dev', 'glitch.me', 'repl.co'
 ];
 
-const SUSPICIOUS_TLDS = [
-  'icu', 'top', 'gq', 'ml', 'tk', 'cf', 'ga', 'click'
-];
+const SUSPICIOUS_TLDS = ['icu', 'top', 'gq', 'ml', 'tk', 'cf', 'ga', 'click'];
 
 function normalizeDomain(name) {
   let s = String(name).toLowerCase();
@@ -524,9 +609,7 @@ function isDynamicPhishing(domain) {
           return { platform, subdomain, reason: 'Рандомный поддомен на бесплатной платформе' };
         }
       }
-      if (subdomain.length > 20) {
-        return { platform, subdomain, reason: 'Подозрительно длинный поддомен' };
-      }
+      if (subdomain.length > 20) return { platform, subdomain, reason: 'Подозрительно длинный поддомен' };
     }
   }
   return null;
@@ -786,6 +869,23 @@ app.get('/api/schedule/raw', async (req, res) => {
     res.json({ success: true, sheets: scheduleCache.rawRows });
   } catch (e) {
     res.status(500).json({ error: 'Не удалось загрузить файл', details: e.message });
+  }
+});
+
+app.get('/api/schedule/debug', async (req, res) => {
+  try {
+    await updateScheduleCache();
+    res.json({
+      success: true,
+      cache: {
+        lastUpdate: scheduleCache.lastUpdate,
+        groupsCount: scheduleCache.data ? scheduleCache.data.groups.length : 0,
+        groups: scheduleCache.data ? scheduleCache.data.groups : []
+      },
+      debug: scheduleCache.debug
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Ошибка', details: e.message });
   }
 });
 
