@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>КиберЩит — Дашборд</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="dashboard">
+    <header>
+      <h1>🛡️ КиберЩит — Дашборд</h1>
+      <p class="subtitle">Статистика вашей безопасности</p>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-icon">🔍</div>
+        <div class="stat-value" id="statChecked">0</div>
+        <div class="stat-label">Сайтов проверено</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-value" id="statDangerous">0</div>
+        <div class="stat-label">Опасных</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-icon">🔶</div>
+        <div class="stat-value" id="statSuspicious">0</div>
+        <div class="stat-label">Подозрительных</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-value" id="statTrackers">0</div>
+        <div class="stat-label">Трекеров</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📜 Последние проверки</h2>
+      <div id="dashboardHistory" class="dashboard-history"></div>
+    </div>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>

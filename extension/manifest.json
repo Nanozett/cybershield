@@ -1,19 +1,24 @@
 {
   "manifest_version": 3,
   "name": "КиберЩит — защита в реальном времени",
-  "version": "3.2.0",
-  "description": "Проверка сайтов на фишинг, генератор паролей, защита данных. Синхронизация с платформой КиберЩит.",
+  "version": "4.0.0",
+  "description": "Проверка сайтов, трекеров, паролей и email. Расширенная защита данных.",
   "permissions": [
     "storage",
     "tabs",
     "notifications",
     "alarms",
     "activeTab",
-    "scripting"
+    "scripting",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
+    "https://cybershield-cyan.vercel.app/*",
     "https://rdap.org/*",
+    "https://api.pwnedpasswords.com/*",
+    "https://haveibeenpwned.com/*",
     "<all_urls>"
   ],
   "background": {
@@ -36,7 +41,17 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
-  ]
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "trackers",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
 }

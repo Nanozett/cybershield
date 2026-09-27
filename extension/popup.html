@@ -6,12 +6,16 @@
 </head>
 <body>
   <div class="popup">
+    <!-- Шапка -->
     <div class="header">
       <div class="logo">🛡️</div>
       <div>
         <div class="brand">КиберЩит</div>
-        <div class="version">v3.2.0</div>
+        <div class="version">v4.0</div>
       </div>
+      <button class="dashboard-btn" id="openDashboardBtn" title="Дашборд">
+        📊
+      </button>
     </div>
 
     <!-- Статус страницы -->
@@ -24,15 +28,40 @@
       </div>
     </div>
 
-    <!-- Год создания сайта -->
-    <div class="section" id="creationSection" style="display:none;">
+    <!-- Счётчик трекеров -->
+    <div class="section tracker-section" id="trackerSection" style="display:none;">
       <div class="section-title">
-        <span>📅 Год создания сайта</span>
+        <span>🚫 Заблокировано трекеров</span>
+        <span class="tracker-badge" id="trackerCount">0</span>
       </div>
-      <div class="creation-info" id="creationInfo">
+      <div class="tracker-list" id="trackerList"></div>
+    </div>
+
+    <!-- Расширенная карточка сайта -->
+    <div class="section" id="siteCardSection" style="display:none;">
+      <div class="section-title">
+        <span>🔎 О сайте</span>
+      </div>
+      <div class="site-info" id="siteInfo"></div>
+    </div>
+
+    <!-- Год создания -->
+    <div class="section" id="creationSection" style="display:none;">
+      <div class="section-title"><span>📅 Год создания</span></div>
+      <div class="creation-info">
         <div class="creation-year" id="creationYear">—</div>
         <div class="creation-age" id="creationAge"></div>
       </div>
+    </div>
+
+    <!-- Проверка email на утечки -->
+    <div class="section">
+      <div class="section-title"><span>📧 Проверка email</span></div>
+      <div class="email-box">
+        <input type="email" id="emailInput" placeholder="your@email.com">
+        <button id="checkEmailBtn" title="Проверить">🔍</button>
+      </div>
+      <div class="email-result" id="emailResult"></div>
     </div>
 
     <!-- Генератор паролей -->
@@ -54,7 +83,7 @@
       <button class="btn btn-primary" id="generateBtn">Сгенерировать</button>
     </div>
 
-    <!-- Ссылки на сайт -->
+    <!-- Ссылки -->
     <div class="section">
       <div class="section-title">🌐 Перейти на сайт</div>
       <div class="menu">
@@ -77,7 +106,6 @@
       </div>
     </div>
 
-    <!-- Синхронизация -->
     <button class="btn btn-sync" id="syncBtn">🔄 Синхронизировать с сайтом</button>
   </div>
   <script src="popup.js"></script>

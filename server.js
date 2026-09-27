@@ -168,10 +168,6 @@ function ensureDBReady() {
 
 // ===== Кастомный Store для express-session на Turso =====
 class TursoStore extends session.Store {
-  constructor() {
-    super();
-  }
-
   get(sid, callback) {
     ensureDBReady()
       .then(() => dbGet('SELECT sess, expire FROM sessions WHERE sid = ?', [sid]))
@@ -181,12 +177,8 @@ class TursoStore extends session.Store {
           dbRun('DELETE FROM sessions WHERE sid = ?', [sid]).catch(() => {});
           return callback(null, null);
         }
-        try {
-          const sess = JSON.parse(row.sess);
-          callback(null, sess);
-        } catch (e) {
-          callback(null, null);
-        }
+        try { callback(null, JSON.parse(row.sess)); }
+        catch (e) { callback(null, null); }
       })
       .catch(err => callback(err));
   }
@@ -197,10 +189,9 @@ class TursoStore extends session.Store {
         const expire = sess.cookie && sess.cookie.expires
           ? new Date(sess.cookie.expires).getTime()
           : Date.now() + 24 * 60 * 60 * 1000;
-        const sessJson = JSON.stringify(sess);
         return dbRun(
           'INSERT INTO sessions (sid, sess, expire) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expire = excluded.expire',
-          [sid, sessJson, expire]
+          [sid, JSON.stringify(sess), expire]
         );
       })
       .then(() => callback(null))
@@ -237,42 +228,23 @@ app.use(session({
   secret: 'secret-key-cybershield',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: false,
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24
-  }
+  cookie: { secure: false, httpOnly: true, maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-// ===== ЛЕГИТИМНЫЕ БРЕНДЫ (глобально) =====
+// ===== ЛЕГИТИМНЫЕ БРЕНДЫ =====
 const LEGITIMATE_BRANDS = [
-  'case-battle.lat',
-  'case-battle.cfd',
-  'steamcommunity.com',
-  'sberbank.ru',
-  'gosuslugi.ru',
-  'vk.com',
-  'yandex.ru',
-  'mail.ru',
-  'avito.ru',
-  'ozon.ru',
-  'wildberries.ru',
-  'tinkoff.ru',
-  'alfabank.ru'
+  'case-battle.lat', 'case-battle.cfd', 'steamcommunity.com',
+  'sberbank.ru', 'gosuslugi.ru', 'vk.com', 'yandex.ru',
+  'mail.ru', 'avito.ru', 'ozon.ru', 'wildberries.ru',
+  'tinkoff.ru', 'alfabank.ru'
 ];
 
-// ===== Нормализация домена (гомоглифы, дефисы) =====
+// ===== Нормализация домена =====
 function normalizeDomain(name) {
   let s = String(name).toLowerCase();
-  const homoglyphs = {
-    'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c',
-    'х': 'x', 'у': 'y', 'к': 'k', 'в': 'b', 'н': 'h',
-    'м': 'm', 'т': 't', 'і': 'i', 'ї': 'i', 'ё': 'e',
-    'ѕ': 's', 'ј': 'j', 'ԁ': 'd'
-  };
+  const homoglyphs = { 'а':'a','е':'e','о':'o','р':'p','с':'c','х':'x','у':'y','к':'k','в':'b','н':'h','м':'m','т':'t','і':'i','ї':'i','ё':'e','ѕ':'s','ј':'j','ԁ':'d' };
   s = s.split('').map(c => homoglyphs[c] || c).join('');
-  s = s.replace(/[-_]/g, '');
-  return s;
+  return s.replace(/[-_]/g, '');
 }
 
 // ===== Расстояние Левенштейна =====
@@ -280,49 +252,34 @@ function levenshtein(a, b) {
   if (a === b) return 0;
   if (!a.length) return b.length;
   if (!b.length) return a.length;
-
   const matrix = [];
   for (let i = 0; i <= b.length; i++) matrix[i] = [i];
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
+      if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+      else matrix[i][j] = Math.min(matrix[i-1][j-1]+1, matrix[i][j-1]+1, matrix[i-1][j]+1);
     }
   }
   return matrix[b.length][a.length];
 }
 
-// ===== Поиск домена-двойника =====
 function findLookalike(domain) {
   const cleanDomain = String(domain).toLowerCase().replace(/^www\./, '').split('.')[0];
   const normalizedInput = normalizeDomain(cleanDomain);
-
   let bestMatch = null;
   for (const brand of LEGITIMATE_BRANDS) {
     const cleanBrand = String(brand).toLowerCase().replace(/^www\./, '').split('.')[0];
     const normalizedBrand = normalizeDomain(cleanBrand);
     if (normalizedInput === normalizedBrand) continue;
     if (normalizedBrand.length < 4) continue;
-
     const distance = levenshtein(normalizedInput, normalizedBrand);
-    if (!bestMatch || distance < bestMatch.distance) {
-      bestMatch = { lookalike: brand, distance };
-    }
+    if (!bestMatch || distance < bestMatch.distance) bestMatch = { lookalike: brand, distance };
   }
   if (bestMatch && bestMatch.distance <= 2) return bestMatch;
   return null;
 }
 
-// ===== Проверка, легитимный ли домен =====
 function isLegitimateBrand(domain) {
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   return LEGITIMATE_BRANDS.some(brand => {
@@ -334,9 +291,7 @@ function isLegitimateBrand(domain) {
 // ===== АВТОРИЗАЦИЯ =====
 app.post('/api/register', async (req, res) => {
   const { username, email, password, role } = req.body;
-  if (!username || !email || !password) {
-    return res.status(400).json({ error: 'Все поля обязательны' });
-  }
+  if (!username || !email || !password) return res.status(400).json({ error: 'Все поля обязательны' });
   try {
     const hash = await bcrypt.hash(password, 10);
     const userRole = (role === 'moderator') ? 'moderator' : 'user';
@@ -353,23 +308,15 @@ app.post('/api/register', async (req, res) => {
         res.json({ success: true, username, role: userRole });
       });
     } catch (err) {
-      console.error('Ошибка регистрации:', err.message);
-      if (err.message.includes('UNIQUE')) {
-        return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
-      }
+      if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'Пользователь с таким email или именем уже существует' });
       return res.status(500).json({ error: 'Ошибка сервера при регистрации' });
     }
-  } catch (err) {
-    console.error('Ошибка хеширования:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Введите email и пароль' });
-  }
+  if (!email || !password) return res.status(400).json({ error: 'Введите email и пароль' });
   try {
     const user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) return res.status(401).json({ error: 'Неверный email или пароль' });
@@ -382,10 +329,7 @@ app.post('/api/login', async (req, res) => {
       if (err) console.error('Session save error:', err);
       res.json({ success: true, username: user.username, role: user.role });
     });
-  } catch (err) {
-    console.error('Ошибка входа:', err.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/logout', (req, res) => {
@@ -399,18 +343,10 @@ app.get('/api/me', async (req, res) => {
   if (req.session.userId) {
     try {
       const row = await dbGet('SELECT username, role FROM users WHERE id = ?', [req.session.userId]);
-      if (!row) {
-        req.session.destroy();
-        return res.json({ authenticated: false });
-      }
+      if (!row) { req.session.destroy(); return res.json({ authenticated: false }); }
       res.json({ authenticated: true, username: row.username, userId: req.session.userId, role: row.role });
-    } catch (err) {
-      console.error('Ошибка получения пользователя:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  } else {
-    res.json({ authenticated: false });
-  }
+    } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
+  } else { res.json({ authenticated: false }); }
 });
 
 // ===== ПРОГРАММЫ И КОММЕНТАРИИ =====
@@ -419,30 +355,17 @@ app.get('/api/software', async (req, res) => {
     const software = await dbAll('SELECT * FROM software');
     const result = [];
     for (const prog of software) {
-      const comments = await dbAll(
-        `SELECT comments.*, users.username 
-         FROM comments 
-         JOIN users ON comments.user_id = users.id 
-         WHERE comments.software_id = ? 
-         ORDER BY comments.created_at DESC`,
-        [prog.id]
-      );
+      const comments = await dbAll(`SELECT comments.*, users.username FROM comments JOIN users ON comments.user_id = users.id WHERE comments.software_id = ? ORDER BY comments.created_at DESC`, [prog.id]);
       result.push({
         id: prog.id, name: prog.name, icon: prog.icon,
         pros: prog.pros ? prog.pros.split(', ') : [],
         cons: prog.cons ? prog.cons.split(', ') : [],
-        comments: comments.map(c => ({
-          id: c.id, userId: c.user_id, username: c.username,
-          text: c.text, created_at: c.created_at
-        }))
+        comments: comments.map(c => ({ id: c.id, userId: c.user_id, username: c.username, text: c.text, created_at: c.created_at }))
       });
     }
     result.sort((a, b) => a.id - b.id);
     res.json(result);
-  } catch (err) {
-    console.error('Ошибка загрузки программ:', err.message);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/comments', async (req, res) => {
@@ -450,14 +373,9 @@ app.post('/api/comments', async (req, res) => {
   const { softwareId, text } = req.body;
   if (!softwareId || !text) return res.status(400).json({ error: 'Не все поля заполнены' });
   try {
-    const result = await dbRun(
-      'INSERT INTO comments (user_id, software_id, text) VALUES (?, ?, ?)',
-      [req.session.userId, softwareId, text]
-    );
+    const result = await dbRun('INSERT INTO comments (user_id, software_id, text) VALUES (?, ?, ?)', [req.session.userId, softwareId, text]);
     res.json({ success: true, commentId: result.lastID });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.delete('/api/comments/:id', async (req, res) => {
@@ -465,30 +383,18 @@ app.delete('/api/comments/:id', async (req, res) => {
   try {
     const row = await dbGet('SELECT user_id FROM comments WHERE id = ?', [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Комментарий не найден' });
-    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
-      return res.status(403).json({ error: 'Недостаточно прав' });
-    }
+    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') return res.status(403).json({ error: 'Недостаточно прав' });
     await dbRun('DELETE FROM comments WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 // ===== ФОРУМ =====
 app.get('/api/topics', async (req, res) => {
   try {
-    const topics = await dbAll(`
-      SELECT topics.*, users.username,
-        (SELECT COUNT(*) FROM posts WHERE posts.topic_id = topics.id) as post_count
-      FROM topics
-      JOIN users ON topics.user_id = users.id
-      ORDER BY topics.created_at DESC
-    `);
+    const topics = await dbAll(`SELECT topics.*, users.username, (SELECT COUNT(*) FROM posts WHERE posts.topic_id = topics.id) as post_count FROM topics JOIN users ON topics.user_id = users.id ORDER BY topics.created_at DESC`);
     res.json(topics);
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/topics', async (req, res) => {
@@ -496,31 +402,18 @@ app.post('/api/topics', async (req, res) => {
   const { title, content } = req.body;
   if (!title || !content) return res.status(400).json({ error: 'Заполните заголовок и содержание' });
   try {
-    const result = await dbRun(
-      'INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)',
-      [req.session.userId, title, content]
-    );
+    const result = await dbRun('INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)', [req.session.userId, title, content]);
     res.json({ success: true, topicId: result.lastID });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.get('/api/topics/:id', async (req, res) => {
   try {
     const topic = await dbGet('SELECT * FROM topics WHERE id = ?', [req.params.id]);
     if (!topic) return res.status(404).json({ error: 'Тема не найдена' });
-    const posts = await dbAll(`
-      SELECT posts.*, users.username
-      FROM posts
-      JOIN users ON posts.user_id = users.id
-      WHERE posts.topic_id = ?
-      ORDER BY posts.pinned DESC, posts.created_at ASC
-    `, [req.params.id]);
+    const posts = await dbAll(`SELECT posts.*, users.username FROM posts JOIN users ON posts.user_id = users.id WHERE posts.topic_id = ? ORDER BY posts.pinned DESC, posts.created_at ASC`, [req.params.id]);
     res.json({ topic, posts });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/posts', async (req, res) => {
@@ -530,17 +423,10 @@ app.post('/api/posts', async (req, res) => {
   try {
     const topic = await dbGet('SELECT closed FROM topics WHERE id = ?', [topicId]);
     if (!topic) return res.status(404).json({ error: 'Тема не найдена' });
-    if (topic.closed === 1 && req.session.role !== 'moderator') {
-      return res.status(403).json({ error: 'Тема закрыта для ответов' });
-    }
-    const result = await dbRun(
-      'INSERT INTO posts (topic_id, user_id, content) VALUES (?, ?, ?)',
-      [topicId, req.session.userId, content]
-    );
+    if (topic.closed === 1 && req.session.role !== 'moderator') return res.status(403).json({ error: 'Тема закрыта для ответов' });
+    const result = await dbRun('INSERT INTO posts (topic_id, user_id, content) VALUES (?, ?, ?)', [topicId, req.session.userId, content]);
     res.json({ success: true, postId: result.lastID });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.delete('/api/posts/:id', async (req, res) => {
@@ -548,56 +434,40 @@ app.delete('/api/posts/:id', async (req, res) => {
   try {
     const row = await dbGet('SELECT user_id FROM posts WHERE id = ?', [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
-    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
-      return res.status(403).json({ error: 'Недостаточно прав' });
-    }
+    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') return res.status(403).json({ error: 'Недостаточно прав' });
     await dbRun('DELETE FROM posts WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.patch('/api/posts/:id/pin', async (req, res) => {
-  if (!req.session.userId || req.session.role !== 'moderator') {
-    return res.status(403).json({ error: 'Доступ только для модераторов' });
-  }
+  if (!req.session.userId || req.session.role !== 'moderator') return res.status(403).json({ error: 'Доступ только для модераторов' });
   const { pinned } = req.body;
   try {
     const result = await dbRun('UPDATE posts SET pinned = ? WHERE id = ?', [pinned, req.params.id]);
     if (result.changes === 0) return res.status(404).json({ error: 'Сообщение не найдено' });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.patch('/api/topics/:id/close', async (req, res) => {
-  if (!req.session.userId || req.session.role !== 'moderator') {
-    return res.status(403).json({ error: 'Доступ только для модераторов' });
-  }
+  if (!req.session.userId || req.session.role !== 'moderator') return res.status(403).json({ error: 'Доступ только для модераторов' });
   const { closed } = req.body;
   try {
     const result = await dbRun('UPDATE topics SET closed = ? WHERE id = ?', [closed, req.params.id]);
     if (result.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.delete('/api/topics/:id', async (req, res) => {
-  if (!req.session.userId || req.session.role !== 'moderator') {
-    return res.status(403).json({ error: 'Доступ только для модераторов' });
-  }
+  if (!req.session.userId || req.session.role !== 'moderator') return res.status(403).json({ error: 'Доступ только для модераторов' });
   try {
     await dbRun('DELETE FROM posts WHERE topic_id = ?', [req.params.id]);
     const result = await dbRun('DELETE FROM topics WHERE id = ?', [req.params.id]);
     if (result.changes === 0) return res.status(404).json({ error: 'Тема не найдена' });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 // ===== ЗАЯВКИ =====
@@ -606,14 +476,9 @@ app.post('/api/submissions', async (req, res) => {
   const { name, description, download_url } = req.body;
   if (!name || !description || !download_url) return res.status(400).json({ error: 'Все поля обязательны' });
   try {
-    const result = await dbRun(
-      'INSERT INTO submissions (user_id, name, description, download_url) VALUES (?, ?, ?, ?)',
-      [req.session.userId, name, description, download_url]
-    );
+    const result = await dbRun('INSERT INTO submissions (user_id, name, description, download_url) VALUES (?, ?, ?, ?)', [req.session.userId, name, description, download_url]);
     res.json({ success: true, submissionId: result.lastID });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.get('/api/submissions', async (req, res) => {
@@ -627,9 +492,7 @@ app.get('/api/submissions', async (req, res) => {
       rows = await dbAll(`SELECT submissions.*, users.username FROM submissions JOIN users ON submissions.user_id = users.id WHERE submissions.user_id = ? ORDER BY submissions.created_at DESC`, [req.session.userId]);
     }
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.get('/api/submissions/:id', async (req, res) => {
@@ -637,50 +500,33 @@ app.get('/api/submissions/:id', async (req, res) => {
   try {
     const row = await dbGet(`SELECT submissions.*, users.username FROM submissions JOIN users ON submissions.user_id = users.id WHERE submissions.id = ?`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Заявка не найдена' });
-    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
+    if (row.user_id !== req.session.userId && req.session.role !== 'moderator') return res.status(403).json({ error: 'Доступ запрещён' });
     res.json(row);
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.patch('/api/submissions/:id', async (req, res) => {
-  if (!req.session.userId || req.session.role !== 'moderator') {
-    return res.status(403).json({ error: 'Только модератор может изменять статус' });
-  }
+  if (!req.session.userId || req.session.role !== 'moderator') return res.status(403).json({ error: 'Только модератор может изменять статус' });
   const { status, review } = req.body;
-  if (!status || !['pending', 'approved', 'rejected', 'reviewed'].includes(status)) {
-    return res.status(400).json({ error: 'Некорректный статус' });
-  }
+  if (!status || !['pending', 'approved', 'rejected', 'reviewed'].includes(status)) return res.status(400).json({ error: 'Некорректный статус' });
   try {
     const result = await dbRun('UPDATE submissions SET status = ?, review = ? WHERE id = ?', [status, review || null, req.params.id]);
     if (result.changes === 0) return res.status(404).json({ error: 'Заявка не найдена' });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.post('/api/submissions/:id/approve', async (req, res) => {
-  if (!req.session.userId || req.session.role !== 'moderator') {
-    return res.status(403).json({ error: 'Только модератор может одобрить' });
-  }
+  if (!req.session.userId || req.session.role !== 'moderator') return res.status(403).json({ error: 'Только модератор может одобрить' });
   const { pros, cons, review } = req.body;
   if (!pros || !cons) return res.status(400).json({ error: 'Укажите плюсы и минусы' });
   try {
     const submission = await dbGet('SELECT name FROM submissions WHERE id = ?', [req.params.id]);
     if (!submission) return res.status(404).json({ error: 'Заявка не найдена' });
-    const insertResult = await dbRun(
-      'INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)',
-      [submission.name, 'shield', pros, cons]
-    );
+    const insertResult = await dbRun('INSERT INTO software (name, icon, pros, cons) VALUES (?, ?, ?, ?)', [submission.name, 'shield', pros, cons]);
     await dbRun('UPDATE submissions SET status = ?, review = ? WHERE id = ?', ['approved', review || null, req.params.id]);
     res.json({ success: true, softwareId: insertResult.lastID });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 // ===== WHOIS =====
@@ -692,21 +538,58 @@ app.get('/api/whois/:domain', async (req, res) => {
     return res.status(404).json({ error: 'Локальный адрес — WHOIS не применим' });
   }
   try {
-    const response = await fetch(`https://rdap.org/domain/${domain}`, {
-      headers: { 'Accept': 'application/json' }, redirect: 'follow'
-    });
+    const response = await fetch(`https://rdap.org/domain/${domain}`, { headers: { 'Accept': 'application/json' }, redirect: 'follow' });
     if (!response.ok) return res.status(404).json({ error: 'RDAP не вернул данные', status: response.status });
     const data = await response.json();
     const registration = (data.events || []).find(e => e.eventAction === 'registration');
     if (!registration || !registration.eventDate) return res.status(404).json({ error: 'Дата регистрации не найдена' });
-    res.json({
-      success: true, domain,
-      year: new Date(registration.eventDate).getFullYear(),
-      fullDate: registration.eventDate.slice(0, 10)
-    });
+    res.json({ success: true, domain, year: new Date(registration.eventDate).getFullYear(), fullDate: registration.eventDate.slice(0, 10) });
   } catch (e) {
     console.error('WHOIS ошибка для', domain, ':', e.message);
     res.status(500).json({ error: 'Не удалось получить данные', details: e.message });
+  }
+});
+
+// ===== ПРОВЕРКА EMAIL ЧЕРЕЗ XPOSEDORNOT (бесплатно, без ключа) =====
+app.get('/api/hibp/email/:email', async (req, res) => {
+  const email = req.params.email;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Некорректный email' });
+  }
+
+  try {
+    const xonUrl = `https://api.xposedornot.com/v1/check-email/${encodeURIComponent(email)}`;
+    const response = await fetch(xonUrl, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'KiberShield-Extension' }
+    });
+
+    if (response.status === 404) {
+      // Не найдено в утечках
+      return res.json({ success: true, breaches: [] });
+    }
+
+    if (!response.ok) {
+      console.error('XposedOrNot вернул статус', response.status);
+      return res.status(500).json({ error: 'Ошибка сервиса проверки', status: response.status });
+    }
+
+    const data = await response.json();
+
+    // XposedOrNot возвращает { status: "success", breaches: [...] } или { "breaches": [...] }
+    const breachNames = data.breaches || data.Breaches || [];
+
+    // Преобразуем список имён в объекты, как ожидает фронтенд
+    const breaches = breachNames.map(name => ({
+      Name: name,
+      Title: name,
+      BreachDate: '',
+      PwnCount: null
+    }));
+
+    res.json({ success: true, breaches });
+  } catch (e) {
+    console.error('XposedOrNot ошибка для', email, ':', e.message);
+    res.status(500).json({ error: 'Не удалось проверить email', details: e.message });
   }
 });
 
@@ -714,7 +597,6 @@ app.get('/api/whois/:domain', async (req, res) => {
 app.post('/api/check', (req, res) => {
   const { url, domain } = req.body;
   if (!url || !domain) return res.status(400).json({ error: 'Не указан URL' });
-
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   const LOCAL_SITES = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
   const isLocal =
@@ -739,30 +621,23 @@ app.post('/api/check', (req, res) => {
 
   let verdict = 'safe';
   const reasons = [];
-
-  const BLACKLIST = [
-    'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
-    'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru'
-  ];
-  const SUSPICIOUS_PATTERNS = [
-    'free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'
-  ];
+  const BLACKLIST = ['phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru','casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru'];
+  const SUSPICIOUS_PATTERNS = ['free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'];
 
   if (BLACKLIST.some(b => cleanDomain.includes(b))) {
     verdict = 'dangerous';
     reasons.push('Домен в чёрном списке КиберЩит');
   }
 
-  // ===== Проверка на двойника (если домен ещё не опасен и не сам бренд) =====
   if (verdict !== 'dangerous' && !isLegitimateBrand(cleanDomain)) {
     const lookalike = findLookalike(cleanDomain);
     if (lookalike) {
       if (lookalike.distance <= 1) {
         verdict = 'dangerous';
-        reasons.push(`Домен-двойник официального сайта «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+        reasons.push(`Домен-двойник «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
       } else {
         if (verdict === 'safe') verdict = 'suspicious';
-        reasons.push(`Домен похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+        reasons.push(`Похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
       }
     }
   }
@@ -788,15 +663,10 @@ app.post('/api/check/sync', async (req, res) => {
   try {
     const limited = history.slice(0, 50);
     for (const item of limited) {
-      await dbRun(
-        'INSERT INTO check_logs (user_id, url, domain, verdict) VALUES (?, ?, ?, ?)',
-        [req.session.userId, item.url || '', item.domain || '', item.verdict || 'unknown']
-      );
+      await dbRun('INSERT INTO check_logs (user_id, url, domain, verdict) VALUES (?, ?, ?, ?)', [req.session.userId, item.url || '', item.domain || '', item.verdict || 'unknown']);
     }
     res.json({ success: true, synced: limited.length });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.get('/api/check/history', async (req, res) => {
@@ -804,9 +674,7 @@ app.get('/api/check/history', async (req, res) => {
   try {
     const rows = await dbAll('SELECT * FROM check_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', [req.session.userId]);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 app.delete('/api/check/history', async (req, res) => {
@@ -814,12 +682,10 @@ app.delete('/api/check/history', async (req, res) => {
   try {
     const result = await dbRun('DELETE FROM check_logs WHERE user_id = ?', [req.session.userId]);
     res.json({ success: true, deleted: result.changes });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-// ===== SPA fallback (кроме файлов со статикой) =====
+// ===== SPA fallback =====
 app.get('*', (req, res, next) => {
   if (path.extname(req.path)) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

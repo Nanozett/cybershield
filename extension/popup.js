@@ -1,4 +1,4 @@
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'https://cybershield-cyan.vercel.app';
 
 document.addEventListener('DOMContentLoaded', () => {
   loadCurrentStatus();
@@ -11,6 +11,13 @@ function bindEvents() {
   document.getElementById('copyBtn').addEventListener('click', copyPassword);
   document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
   document.getElementById('syncBtn').addEventListener('click', syncNow);
+  document.getElementById('checkEmailBtn').addEventListener('click', checkEmail);
+  document.getElementById('emailInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkEmail();
+  });
+  document.getElementById('openDashboardBtn').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'openDashboard' });
+  });
 
   document.querySelectorAll('.menu button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -23,7 +30,7 @@ function bindEvents() {
 function loadCurrentStatus() {
   chrome.runtime.sendMessage({ action: 'getCurrentStatus' }, (response) => {
     if (chrome.runtime.lastError || !response) {
-      renderStatus({ verdict: 'unknown', reasons: ['Не удалось получить статус'], creationInfo: null });
+      renderStatus({ verdict: 'unknown', reasons: ['Не удалось получить статус'], creationInfo: null, ipInfo: null });
       return;
     }
     renderStatus(response);
@@ -59,61 +66,130 @@ function renderStatus(data) {
     reasons.textContent = (data.reasons && data.reasons.length) ? data.reasons.join(' • ') : '';
   }
 
-  // Отображение года создания
-  const creationSection = document.getElementById('creationSection');
-  const creationYear = document.getElementById('creationYear');
-  const creationAge = document.getElementById('creationAge');
+  // Счётчик трекеров
+  renderTrackers(data.trackerCount || 0, data.trackersByDomain || {});
 
-  console.log('[КиберЩит popup] creationInfo:', data.creationInfo);
+  // Карточка сайта
+  renderSiteCard(data.creationInfo, data.ipInfo);
 
-  if (data.creationInfo && data.creationInfo.year) {
-    creationSection.style.display = 'block';
-    creationYear.textContent = data.creationInfo.year;
+  // Год создания
+  renderCreation(data.creationInfo);
+}
 
-    const regDate = new Date(data.creationInfo.fullDate);
+function renderTrackers(count, byDomain) {
+  const section = document.getElementById('trackerSection');
+  if (!count) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  document.getElementById('trackerCount').textContent = count;
+
+  const list = document.getElementById('trackerList');
+  const entries = Object.entries(byDomain).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="opacity:0.8;">Трекеров не обнаружено</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([domain, cnt]) =>
+    `<div class="tracker-item"><span>${domain}</span><span>${cnt}</span></div>`
+  ).join('');
+}
+
+function renderSiteCard(creationInfo, ipInfo) {
+  const section = document.getElementById('siteCardSection');
+  const info = document.getElementById('siteInfo');
+  const rows = [];
+
+  if (ipInfo && ipInfo.ip) {
+    rows.push(`<div class="site-row"><span class="site-label">IP-адрес</span><span class="site-value">${ipInfo.ip}</span></div>`);
+  }
+  if (ipInfo && ipInfo.country) {
+    const flag = ipInfo.countryCode ? getFlagEmoji(ipInfo.countryCode) : '';
+    rows.push(`<div class="site-row"><span class="site-label">Страна</span><span class="site-value">${flag} ${ipInfo.country}</span></div>`);
+  }
+  if (ipInfo && ipInfo.city) {
+    rows.push(`<div class="site-row"><span class="site-label">Город</span><span class="site-value">${ipInfo.city}</span></div>`);
+  }
+  if (ipInfo && ipInfo.org) {
+    rows.push(`<div class="site-row"><span class="site-label">Хостинг</span><span class="site-value">${ipInfo.org}</span></div>`);
+  }
+  if (creationInfo && creationInfo.fullDate) {
+    rows.push(`<div class="site-row"><span class="site-label">Дата регистрации</span><span class="site-value">${creationInfo.fullDate}</span></div>`);
+  }
+
+  if (rows.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  info.innerHTML = rows.join('');
+}
+
+function getFlagEmoji(countryCode) {
+  if (!countryCode || countryCode.length !== 2) return '';
+  const codePoints = countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
+function renderCreation(creationInfo) {
+  const section = document.getElementById('creationSection');
+  const year = document.getElementById('creationYear');
+  const age = document.getElementById('creationAge');
+
+  if (creationInfo && creationInfo.year) {
+    section.style.display = 'block';
+    year.textContent = creationInfo.year;
+    const regDate = new Date(creationInfo.fullDate);
     const ageDays = Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-    let ageText = '';
-    let ageColor = '';
-
-    if (ageDays < 30) {
-      ageText = `⚠️ Всего ${ageDays} дн. назад — высокий риск`;
-      ageColor = '#e74c3c';
-    } else if (ageDays < 365) {
-      ageText = `⏳ ${ageDays} дн. — молодой домен`;
-      ageColor = '#f39c12';
-    } else {
-      const years = Math.floor(ageDays / 365);
-      ageText = `✅ ${years} лет — надёжный домен`;
-      ageColor = '#2ecc71';
-    }
-
-    creationAge.textContent = ageText;
-    creationAge.style.color = ageColor;
+    let text = '', color = '';
+    if (ageDays < 30) { text = `⚠️ ${ageDays} дн. — высокий риск`; color = '#e74c3c'; }
+    else if (ageDays < 365) { text = `⏳ ${ageDays} дн. — молодой домен`; color = '#f39c12'; }
+    else { text = `✅ ${Math.floor(ageDays / 365)} лет — надёжный`; color = '#2ecc71'; }
+    age.textContent = text;
+    age.style.color = color;
   } else {
-    creationSection.style.display = 'block';
-    creationYear.textContent = '—';
-    creationAge.textContent = 'Данные недоступны (сервер выключен или зона не поддерживается)';
-    creationAge.style.color = '#94a3b8';
+    section.style.display = 'none';
   }
 }
 
+// ===== Email проверка =====
+async function checkEmail() {
+  const email = document.getElementById('emailInput').value.trim();
+  const result = document.getElementById('emailResult');
+  if (!email || !email.includes('@')) {
+    result.innerHTML = '<div style="color:#e74c3c;">Введите корректный email</div>';
+    return;
+  }
+  result.innerHTML = '<div style="color:#64748b;">⏳ Проверяем...</div>';
+  chrome.runtime.sendMessage({ action: 'checkEmail', email }, (response) => {
+    if (!response || !response.success) {
+      result.innerHTML = `<div style="color:#e74c3c;">Ошибка: ${response?.error || 'неизвестно'}</div>`;
+      return;
+    }
+    if (!response.breaches || response.breaches.length === 0) {
+      result.innerHTML = '<div class="no-breaches">✅ Email не найден в известных утечках</div>';
+      return;
+    }
+    result.innerHTML = `
+      <div style="margin-bottom:6px;font-weight:600;color:#991b1b;">Найден в ${response.breaches.length} утечках:</div>
+      ${response.breaches.slice(0, 5).map(b => `
+        <div class="breach-item">
+          <strong>${b.Name || b.Title || 'Утечка'}</strong><br>
+          <span style="color:#64748b;">${b.BreachDate || ''} • ${b.PwnCount ? Number(b.PwnCount).toLocaleString('ru-RU') + ' записей' : ''}</span>
+        </div>
+      `).join('')}
+    `;
+  });
+}
+
+// ===== Генератор паролей =====
 function generatePassword() {
   const length = parseInt(document.getElementById('passLength').value) || 16;
   const upper = document.getElementById('useUpper').checked;
   const lower = document.getElementById('useLower').checked;
   const digits = document.getElementById('useDigits').checked;
   const symbols = document.getElementById('useSymbols').checked;
-
   let chars = '';
   if (upper) chars += 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   if (lower) chars += 'abcdefghijkmnpqrstuvwxyz';
   if (digits) chars += '23456789';
   if (symbols) chars += '!@#$%^&*()-_=+[]{}';
-
-  if (!chars) {
-    document.getElementById('generatedPassword').value = 'Выберите хотя бы один набор';
-    return;
-  }
+  if (!chars) { document.getElementById('generatedPassword').value = 'Выберите набор'; return; }
   let pass = '';
   const arr = new Uint32Array(length);
   crypto.getRandomValues(arr);
@@ -132,6 +208,7 @@ function copyPassword() {
   setTimeout(() => btn.textContent = original, 1500);
 }
 
+// ===== История =====
 function loadHistory() {
   chrome.runtime.sendMessage({ action: 'getHistory' }, (response) => {
     const list = document.getElementById('historyList');
@@ -150,10 +227,11 @@ function loadHistory() {
 }
 
 function clearHistory() {
-  if (!confirm('Очистить историю проверок?')) return;
+  if (!confirm('Очистить историю?')) return;
   chrome.runtime.sendMessage({ action: 'clearHistory' }, () => loadHistory());
 }
 
+// ===== Синхронизация =====
 function syncNow() {
   const btn = document.getElementById('syncBtn');
   btn.textContent = '⏳ Синхронизация...';
