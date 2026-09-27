@@ -27,14 +27,41 @@ function bindEvents() {
   });
 }
 
+// ===== Загрузка статуса с таймаутом =====
 function loadCurrentStatus() {
-  chrome.runtime.sendMessage({ action: 'getCurrentStatus' }, (response) => {
-    if (chrome.runtime.lastError || !response) {
-      renderStatus({ verdict: 'unknown', reasons: ['Не удалось получить статус'], creationInfo: null, ipInfo: null });
-      return;
+  let responded = false;
+
+  // Защитный таймер: если через 6 секунд ответа нет — показываем «неизвестно»
+  const guardTimer = setTimeout(() => {
+    if (responded) return;
+    responded = true;
+    renderStatus({
+      verdict: 'unknown',
+      reasons: ['Проверка заняла слишком много времени'],
+      creationInfo: null,
+      ipInfo: null
+    });
+  }, 6000);
+
+  try {
+    chrome.runtime.sendMessage({ action: 'getCurrentStatus' }, (response) => {
+      if (responded) return;
+      responded = true;
+      clearTimeout(guardTimer);
+
+      if (chrome.runtime.lastError || !response) {
+        renderStatus({ verdict: 'unknown', reasons: ['Не удалось получить статус'], creationInfo: null, ipInfo: null });
+        return;
+      }
+      renderStatus(response);
+    });
+  } catch (e) {
+    clearTimeout(guardTimer);
+    if (!responded) {
+      responded = true;
+      renderStatus({ verdict: 'unknown', reasons: ['Ошибка связи с background'], creationInfo: null, ipInfo: null });
     }
-    renderStatus(response);
-  });
+  }
 }
 
 function renderStatus(data) {
@@ -66,13 +93,8 @@ function renderStatus(data) {
     reasons.textContent = (data.reasons && data.reasons.length) ? data.reasons.join(' • ') : '';
   }
 
-  // Счётчик трекеров
   renderTrackers(data.trackerCount || 0, data.trackersByDomain || {});
-
-  // Карточка сайта
   renderSiteCard(data.creationInfo, data.ipInfo);
-
-  // Год создания
   renderCreation(data.creationInfo);
 }
 
@@ -147,7 +169,7 @@ function renderCreation(creationInfo) {
   }
 }
 
-// ===== Email проверка =====
+// ===== Email =====
 async function checkEmail() {
   const email = document.getElementById('emailInput').value.trim();
   const result = document.getElementById('emailResult');
@@ -169,8 +191,7 @@ async function checkEmail() {
       <div style="margin-bottom:6px;font-weight:600;color:#991b1b;">Найден в ${response.breaches.length} утечках:</div>
       ${response.breaches.slice(0, 5).map(b => `
         <div class="breach-item">
-          <strong>${b.Name || b.Title || 'Утечка'}</strong><br>
-          <span style="color:#64748b;">${b.BreachDate || ''} • ${b.PwnCount ? Number(b.PwnCount).toLocaleString('ru-RU') + ' записей' : ''}</span>
+          <strong>${b.Name || b.Title || 'Утечка'}</strong>
         </div>
       `).join('')}
     `;

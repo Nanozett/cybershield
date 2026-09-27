@@ -1,4 +1,4 @@
-// background.js — сервис-воркер расширения КиберЩит v4.1
+// background.js — сервис-воркер расширения КиберЩит v4.2
 
 const SERVER_URL = 'https://cybershield-cyan.vercel.app';
 
@@ -17,10 +17,147 @@ const GOVERNMENT_SITES = [
 const LOCAL_SITES = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
 
 const BLACKLIST = [
+  // ===== Примеры / базовые =====
   'phishing-example.com', 'malware-site.ru', 'free-vbucks.net',
   'steam-communlty.com', 'sberbank-online-vhod.ru',
+
+  // ===== Двойники case-battle =====
   'casebatle.id', 'casbatle.com', 'casebattle.red',
-  'case-batlte.com', 'cases-batle.ru'
+  'case-batlte.com', 'cases-batle.ru',
+
+  // ===== Фишинг / кража данных карт =====
+  'brevis.by',
+  'moneyatphone.top',
+
+  // ===== Лотереи/опросы с кражей данных =====
+  'fastrefund.website',
+  'hmail1009.blogspot.nl',
+  'prizeme.com.ua',
+  'spleth.icu',
+
+  // ===== SMS-разводы / платные подписки =====
+  'jugem.jp',
+  '100linksdvgpn.avafedors.freedomain.thehost.com.ua',
+  '6gyf.sionas.homelinux.org',
+  'driveron.ru',
+  'drivers.byethost16.com',
+  'files.truetds.icu',
+  'forum.jokke.ru',
+  'fqevj.kolomnatrud.ru',
+  'fsfll.fgawudownsyfuf.info',
+  'geforcesh.preumnoj.ru',
+  'gsmsignal.ru',
+  'hit-kino.com',
+  'hjpzt.rtk-sales.ru',
+  'ikbsk.bear-hunt.ru',
+  'maksiko.ru',
+  'msaav.radiofaiz.ru',
+  'opendrivers.ru',
+  'orav.info',
+  'pravoholding.ru',
+  'qsiub.atomproduction.ru',
+  'qwcxp.elcoleso.ru',
+  'vernaconsco.rutopik.ru',
+  'vihce.wilgood63.ru',
+  'xagoc.geo-meter.ru',
+
+  // ===== Фейковые загрузки / мини-загрузчики =====
+  'apponic.com',
+  'download-windows.org',
+  'downloadastro.com',
+  '1progs.ru',
+  'advanced-systemcare-com.ru',
+  'aktiv-windows.ucoz.com',
+  'andyroid.net',
+  'antikeys.org',
+  'bandicam-pro.ru',
+  'botdilofce.bandcamp.com',
+  'boxprograms.ru',
+  'chelcenter.ru',
+  'computta.com',
+  'crackheaps.com',
+  'crackpluskeygen.org',
+  'doublegames.ru',
+  'downloadelements.com',
+  'driveridentifier.com',
+  'drivers.org.ru',
+  'driverunpaid.ru',
+  'drp.su',
+  'filesdatabase4u.com',
+  'filehorse.com',
+  'freecrackpatch.com',
+  'fsm-portal.net',
+  'get.cryptobrowser.site',
+  'installpack.net',
+  'jeweell.com',
+  'kichkas.biz',
+  'kryptex.org',
+  'listid.ru',
+  'mediagetsite.com',
+  'mirsofta.ru',
+  'moiprogrammy.com',
+  'mwfix.ru',
+  'nikask.ru',
+  'nullthemedownload.com',
+  'nvidiadrivers.net',
+  'oneindir.com',
+  'oneprogs.ru',
+  'removal-virusguide.com',
+  'savow.com',
+  'serialms.com',
+  'smojem.ru',
+  'softkumir.ru',
+  'softportal.com',
+  'solvusoft.com',
+  'teramissu-hom.com',
+  'top-best-browser.ru',
+  'tvoiprogrammy.ru',
+  'ubar-pro4.ru',
+  'upantool.com',
+  'updatestar.com',
+  'vipmolik.net',
+  'virus4remove.com',
+  'w10-digital-activation-program.ru',
+  'winxpsoft.com',
+  'xeplayer.com',
+  'youtube.net.ua',
+
+  // ===== Вирусы =====
+  'imei-poisk.ru',
+  'programmi-dlya-vzloma.com',
+  '17ebook.com',
+  'aladel.net',
+  'bpwhamburgorchardpark.org',
+  'clicnews.com',
+  'dfwdiesel.net',
+  'divineenterprises.net',
+  'fantasticfilms.ru',
+  'gardensrestaurantandcatering.com',
+  'ginedis.com',
+  'gncr.org',
+  'hdvideoforums.org',
+  'hihanin.com',
+  'kingfamilyphotoalbum.com',
+  'likaraoke.com',
+  'mactep.org',
+  'magic4you.nu',
+  'marbling.pe.kr',
+  'nacjalneg.info',
+  'pronline.ru',
+  'purplehoodie.com',
+  'qsng.cn',
+  'seksburada.net',
+  'sportsmansclub.net',
+  'stock888.cn',
+  'tathli.com',
+  'teamclouds.com',
+  'texaswhitetailfever.com',
+  'wadefamilytree.org',
+  'xnescat.info',
+  'yt118.com',
+
+  // ===== Подозрительные =====
+  'unvesouver39238.weebly.com'
 ];
 
 const SUSPICIOUS_PATTERNS = [
@@ -35,6 +172,18 @@ const LEGITIMATE_BRANDS = [
   'tinkoff.ru', 'alfabank.ru'
 ];
 
+// ===== Утилита: fetch с таймаутом =====
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ===== Нормализация домена =====
 function normalizeDomain(name) {
   let s = String(name).toLowerCase();
@@ -45,8 +194,7 @@ function normalizeDomain(name) {
     'ѕ': 's', 'ј': 'j', 'ԁ': 'd'
   };
   s = s.split('').map(c => homoglyphs[c] || c).join('');
-  s = s.replace(/[-_]/g, '');
-  return s;
+  return s.replace(/[-_]/g, '');
 }
 
 // ===== Расстояние Левенштейна =====
@@ -59,21 +207,13 @@ function levenshtein(a, b) {
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
   for (let i = 1; i <= b.length; i++) {
     for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
+      if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+      else matrix[i][j] = Math.min(matrix[i-1][j-1]+1, matrix[i][j-1]+1, matrix[i-1][j]+1);
     }
   }
   return matrix[b.length][a.length];
 }
 
-// ===== Поиск двойника =====
 function findLookalike(domain) {
   const cleanDomain = String(domain).toLowerCase().replace(/^www\./, '').split('.')[0];
   const normalizedInput = normalizeDomain(cleanDomain);
@@ -84,15 +224,12 @@ function findLookalike(domain) {
     if (normalizedInput === normalizedBrand) continue;
     if (normalizedBrand.length < 4) continue;
     const distance = levenshtein(normalizedInput, normalizedBrand);
-    if (!bestMatch || distance < bestMatch.distance) {
-      bestMatch = { lookalike: brand, distance };
-    }
+    if (!bestMatch || distance < bestMatch.distance) bestMatch = { lookalike: brand, distance };
   }
   if (bestMatch && bestMatch.distance <= 2) return bestMatch;
   return null;
 }
 
-// ===== Проверка госсайтов =====
 function isGovernmentSite(domain) {
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   return GOVERNMENT_SITES.some(site => {
@@ -101,7 +238,6 @@ function isGovernmentSite(domain) {
   });
 }
 
-// ===== Проверка локальных =====
 function isLocalSite(domain) {
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   if (LOCAL_SITES.includes(cleanDomain)) return true;
@@ -112,7 +248,6 @@ function isLocalSite(domain) {
   return false;
 }
 
-// ===== Проверка легитимного бренда =====
 function isLegitimateBrand(domain) {
   const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
   return LEGITIMATE_BRANDS.some(brand => {
@@ -158,12 +293,29 @@ function safeNotify(title, message, priority = 1) {
   } catch (e) {}
 }
 
-// ===== Счётчик трекеров =====
-const trackerCounts = {}; // { tabId: { total, byDomain } }
+// ===== Кэш =====
+const trackerCounts = {};       // { tabId: { total, byDomain } }
+const checkCache = {};          // { url: { data, timestamp } }
+const CACHE_TTL = 30000;        // 30 секунд
+
+function getCached(url) {
+  const c = checkCache[url];
+  if (c && Date.now() - c.timestamp < CACHE_TTL) return c.data;
+  return null;
+}
+
+function setCached(url, data) {
+  checkCache[url] = { data, timestamp: Date.now() };
+  // Чистим старые
+  const now = Date.now();
+  for (const k of Object.keys(checkCache)) {
+    if (now - checkCache[k].timestamp > CACHE_TTL * 4) delete checkCache[k];
+  }
+}
 
 // ===== Установка =====
 chrome.runtime.onInstalled.addListener(() => {
-  safeNotify('КиберЩит активирован', 'Защита v4.1: трекеры, пароли, email (XposedOrNot), карточка сайта.', 1);
+  safeNotify('КиберЩит активирован', 'Защита v4.2: быстрая проверка, трекеры, пароли, email.', 1);
   chrome.storage.local.set({
     history: [],
     settings: { notifications: true, trackerBlocking: true },
@@ -171,11 +323,15 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// ===== Слушаем открытие вкладок =====
+// ===== Вкладки =====
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'loading' && tab && tab.url) {
+    // Пока грузится — сбрасываем значок в «?»
+    safeUpdateBadge(tabId, 'unknown', 0);
+  }
   if (changeInfo.status === 'complete' && tab && tab.url && (tab.url.startsWith('http') || tab.url.startsWith('file'))) {
     trackerCounts[tabId] = { total: 0, byDomain: {} };
-    checkUrl(tab.url, tabId);
+    checkUrl(tab.url, tabId).catch(() => {});
   }
 });
 
@@ -187,73 +343,76 @@ chrome.tabs.onActivated.addListener((info) => {
   chrome.tabs.get(info.tabId, (tab) => {
     if (chrome.runtime.lastError) return;
     if (tab && tab.url && (tab.url.startsWith('http') || tab.url.startsWith('file'))) {
-      checkUrl(tab.url, tab.id);
+      checkUrl(tab.url, tab.id).catch(() => {});
     }
   });
 });
 
-// ===== Получение года создания =====
+// ===== WHOIS =====
 async function getDomainCreationDate(domain) {
   if (isLocalSite(domain)) return null;
+
+  // 1) Наш сервер
   try {
-    const res = await fetch(`${SERVER_URL}/api/whois/${domain}`, {
+    const res = await fetchWithTimeout(`${SERVER_URL}/api/whois/${domain}`, {
       headers: { 'Accept': 'application/json' }
-    });
-    if (res.ok) {
+    }, 3500);
+    if (res && res.ok) {
       const data = await res.json();
       if (data.success && data.year) return { year: data.year, fullDate: data.fullDate, source: 'server' };
     }
   } catch (e) {}
+
+  // 2) Резерв: rdap.org
   try {
-    const res = await fetch(`https://rdap.org/domain/${domain}`, {
+    const res = await fetchWithTimeout(`https://rdap.org/domain/${domain}`, {
       headers: { 'Accept': 'application/json' }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const registration = (data.events || []).find(e => e.eventAction === 'registration');
-    if (!registration || !registration.eventDate) return null;
-    const date = new Date(registration.eventDate);
-    return { year: date.getFullYear(), fullDate: registration.eventDate.slice(0, 10), source: 'rdap.org' };
-  } catch (e) { return null; }
+    }, 3500);
+    if (res && res.ok) {
+      const data = await res.json();
+      const registration = (data.events || []).find(e => e.eventAction === 'registration');
+      if (registration && registration.eventDate) {
+        const date = new Date(registration.eventDate);
+        return { year: date.getFullYear(), fullDate: registration.eventDate.slice(0, 10), source: 'rdap.org' };
+      }
+    }
+  } catch (e) {}
+
+  return null;
 }
 
-// ===== Получение IP и страны (с резервным API) =====
+// ===== IP =====
 async function getIpInfo(domain) {
   if (isLocalSite(domain)) return null;
 
-  // Способ 1: ipapi.co
+  // 1) ipapi.co
   try {
-    const res = await fetch(`https://ipapi.co/${domain}/json/`, {
+    const res = await fetchWithTimeout(`https://ipapi.co/${domain}/json/`, {
       headers: { 'Accept': 'application/json' }
-    });
-    if (res.ok) {
+    }, 3500);
+    if (res && res.ok) {
       const data = await res.json();
       if (data && !data.error && data.ip) {
         return {
-          ip: data.ip || null,
-          country: data.country_name || null,
-          countryCode: data.country_code || null,
-          org: data.org || null,
-          city: data.city || null
+          ip: data.ip, country: data.country_name,
+          countryCode: data.country_code, org: data.org, city: data.city
         };
       }
     }
   } catch (e) {}
 
-  // Способ 2 (резерв): ipwho.is
+  // 2) ipwho.is
   try {
-    const res = await fetch(`https://ipwho.is/${domain}`, {
+    const res = await fetchWithTimeout(`https://ipwho.is/${domain}`, {
       headers: { 'Accept': 'application/json' }
-    });
-    if (res.ok) {
+    }, 3500);
+    if (res && res.ok) {
       const data = await res.json();
-      if (data && data.success !== false) {
+      if (data && data.success !== false && data.ip) {
         return {
-          ip: data.ip || null,
-          country: data.country || null,
-          countryCode: data.country_code || null,
-          org: (data.connection && data.connection.isp) || data.connection?.org || null,
-          city: data.city || null
+          ip: data.ip, country: data.country, countryCode: data.country_code,
+          org: (data.connection && (data.connection.isp || data.connection.org)) || null,
+          city: data.city
         };
       }
     }
@@ -262,73 +421,110 @@ async function getIpInfo(domain) {
   return null;
 }
 
+// ===== Быстрая проверка (без сети) =====
+function quickCheck(domain, url) {
+  let verdict = 'safe';
+  const reasons = [];
+
+  if (BLACKLIST.some(b => domain.includes(b))) {
+    verdict = 'dangerous';
+    reasons.push('Домен в чёрном списке КиберЩит');
+  }
+
+  if (verdict !== 'dangerous' && !isLegitimateBrand(domain)) {
+    const lookalike = findLookalike(domain);
+    if (lookalike) {
+      if (lookalike.distance <= 1) {
+        verdict = 'dangerous';
+        reasons.push(`Домен-двойник «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+      } else {
+        if (verdict === 'safe') verdict = 'suspicious';
+        reasons.push(`Похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
+      }
+    }
+  }
+
+  if (SUSPICIOUS_PATTERNS.some(p => domain.toLowerCase().includes(p))) {
+    if (verdict === 'safe') verdict = 'suspicious';
+    reasons.push('Подозрительное имя домена');
+  }
+
+  if (url.startsWith('http://')) {
+    if (verdict === 'safe') verdict = 'suspicious';
+    reasons.push('Соединение без HTTPS');
+  }
+
+  return { verdict, reasons };
+}
+
 // ===== Основная проверка =====
 async function checkUrl(url, tabId) {
   try {
     const parsed = new URL(url);
     const domain = parsed.hostname;
-    let verdict = 'safe';
-    let reasons = [];
 
     // 0. Локальные
     if (isLocalSite(domain)) {
-      verdict = 'safe';
-      reasons.push('Официальный сайт "КиберЩит" (Локальный адрес — свой проект)');
+      const verdict = 'safe';
+      const reasons = ['Официальный сайт "КиберЩит" (Локальный адрес)'];
+      const data = { verdict, reasons, domain, creationInfo: null, ipInfo: null };
       safeUpdateBadge(tabId, verdict, trackerCounts[tabId]?.total || 0);
       saveToHistory({ url, domain, verdict, reasons, time: Date.now(), creationInfo: null });
-      safeSendMessage(tabId, { action: 'verdictUpdate', verdict, reasons, domain, creationInfo: null });
-      return { verdict, reasons, creationInfo: null };
+      safeSendMessage(tabId, { action: 'verdictUpdate', ...data });
+      setCached(url, data);
+      return data;
     }
 
-    // Параллельно запрашиваем данные
+    // Быстрая проверка — сразу
+    const { verdict: quickVerdict, reasons: quickReasons } = quickCheck(domain, url);
+
+    // Госсайты
+    if (isGovernmentSite(domain)) {
+      const verdict = 'government';
+      const reasons = ['Официальный сайт государственного органа РФ'];
+      const cached = getCached(url);
+      const data = {
+        verdict, reasons, domain,
+        creationInfo: cached?.creationInfo || null,
+        ipInfo: cached?.ipInfo || null
+      };
+      safeUpdateBadge(tabId, verdict, trackerCounts[tabId]?.total || 0);
+      saveToHistory({ url, domain, verdict, reasons, time: Date.now(), creationInfo: null });
+      safeSendMessage(tabId, { action: 'verdictUpdate', ...data });
+      // Обогащаем в фоне
+      enrichInBackground(url, domain, tabId, verdict, reasons);
+      setCached(url, data);
+      return data;
+    }
+
+    // Показываем быстрый результат сразу
+    const fastData = { verdict: quickVerdict, reasons: quickReasons, domain, creationInfo: null, ipInfo: null };
+    safeUpdateBadge(tabId, quickVerdict, trackerCounts[tabId]?.total || 0);
+    safeSendMessage(tabId, { action: 'verdictUpdate', ...fastData });
+    saveToHistory({ url, domain, verdict: quickVerdict, reasons: quickReasons, time: Date.now(), creationInfo: null });
+
+    // Обогащаем в фоне (WHOIS + IP + сервер)
+    enrichInBackground(url, domain, tabId, quickVerdict, quickReasons);
+
+    return fastData;
+  } catch (e) {
+    console.error('Ошибка проверки:', e);
+    return { verdict: 'unknown', reasons: [], domain: '', creationInfo: null, ipInfo: null };
+  }
+}
+
+// ===== Обогащение (WHOIS, IP, сервер) в фоне =====
+async function enrichInBackground(url, domain, tabId, baseVerdict, baseReasons) {
+  try {
     const [creationInfo, ipInfo] = await Promise.all([
       getDomainCreationDate(domain),
       getIpInfo(domain)
     ]);
 
-    // 1. Госсайты
-    if (isGovernmentSite(domain)) {
-      verdict = 'government';
-      reasons.push('Официальный сайт государственного органа РФ');
-      safeUpdateBadge(tabId, verdict, trackerCounts[tabId]?.total || 0);
-      saveToHistory({ url, domain, verdict, reasons, time: Date.now(), creationInfo, ipInfo });
-      safeSendMessage(tabId, { action: 'verdictUpdate', verdict, reasons, domain, creationInfo, ipInfo });
-      return { verdict, reasons, creationInfo, ipInfo };
-    }
+    let verdict = baseVerdict;
+    let reasons = [...baseReasons];
 
-    // 2. Чёрный список
-    if (BLACKLIST.some(b => domain.includes(b))) {
-      verdict = 'dangerous';
-      reasons.push('Домен в чёрном списке КиберЩит');
-    }
-
-    // 3. Двойник
-    if (verdict !== 'dangerous' && !isLegitimateBrand(domain)) {
-      const lookalike = findLookalike(domain);
-      if (lookalike) {
-        if (lookalike.distance <= 1) {
-          verdict = 'dangerous';
-          reasons.push(`Домен-двойник «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
-        } else {
-          if (verdict === 'safe') verdict = 'suspicious';
-          reasons.push(`Похож на «${lookalike.lookalike}» (разница ${lookalike.distance} симв.)`);
-        }
-      }
-    }
-
-    // 4. Паттерны
-    if (SUSPICIOUS_PATTERNS.some(p => domain.toLowerCase().includes(p))) {
-      if (verdict === 'safe') verdict = 'suspicious';
-      reasons.push('Подозрительное имя домена');
-    }
-
-    // 5. HTTPS
-    if (url.startsWith('http://')) {
-      if (verdict === 'safe') verdict = 'suspicious';
-      reasons.push('Соединение без HTTPS');
-    }
-
-    // 6. Возраст
+    // Возраст домена
     if (creationInfo && creationInfo.fullDate) {
       const regDate = new Date(creationInfo.fullDate);
       const ageDays = Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -338,14 +534,14 @@ async function checkUrl(url, tabId) {
       }
     }
 
-    // 7. Сервер
+    // Наш сервер
     try {
-      const res = await fetch(`${SERVER_URL}/api/check`, {
+      const res = await fetchWithTimeout(`${SERVER_URL}/api/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, domain })
-      });
-      if (res.ok) {
+      }, 3500);
+      if (res && res.ok) {
         const data = await res.json();
         if (data.verdict && data.verdict !== 'safe') {
           const rank = { safe: 0, government: 1, suspicious: 2, dangerous: 3 };
@@ -357,21 +553,18 @@ async function checkUrl(url, tabId) {
 
     reasons = [...new Set(reasons)];
 
+    const enriched = { verdict, reasons, domain, creationInfo, ipInfo };
     safeUpdateBadge(tabId, verdict, trackerCounts[tabId]?.total || 0);
-    saveToHistory({ url, domain, verdict, reasons, time: Date.now(), creationInfo, ipInfo });
+    safeSendMessage(tabId, { action: 'verdictUpdate', ...enriched });
+    setCached(url, enriched);
 
-    if (verdict === 'dangerous') {
+    if (verdict === 'dangerous' && baseVerdict !== 'dangerous') {
       safeNotify('⚠️ Опасный сайт!', `${domain} — возможен фишинг!`, 2);
-    } else if (verdict === 'suspicious') {
+    } else if (verdict === 'suspicious' && baseVerdict === 'safe') {
       safeNotify('Подозрительный сайт', `Будьте осторожны: ${domain}`, 1);
     }
-
-    safeSendMessage(tabId, { action: 'verdictUpdate', verdict, reasons, domain, creationInfo, ipInfo });
-
-    return { verdict, reasons, creationInfo, ipInfo };
   } catch (e) {
-    console.error('Ошибка проверки:', e);
-    return { verdict: 'unknown', reasons: [], creationInfo: null, ipInfo: null };
+    console.warn('Ошибка обогащения:', e);
   }
 }
 
@@ -399,13 +592,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return sendResponse({ verdict: 'unknown', reasons: ['Ошибка получения вкладки'], creationInfo: null, ipInfo: null });
       }
       if (tabs[0] && tabs[0].url) {
-        checkUrl(tabs[0].url, tabs[0].id).then((res) => {
-          const tabId = tabs[0].id;
+        const url = tabs[0].url;
+        const tabId = tabs[0].id;
+
+        // Если есть в кэше — сразу отдаём
+        const cached = getCached(url);
+        if (cached) {
+          return sendResponse({
+            ...cached,
+            trackerCount: trackerCounts[tabId]?.total || 0,
+            trackersByDomain: trackerCounts[tabId]?.byDomain || {}
+          });
+        }
+
+        // Иначе запускаем проверку и ждём
+        checkUrl(url, tabId).then((res) => {
           sendResponse({
             ...res,
             trackerCount: trackerCounts[tabId]?.total || 0,
             trackersByDomain: trackerCounts[tabId]?.byDomain || {}
           });
+        }).catch(() => {
+          sendResponse({ verdict: 'unknown', reasons: ['Ошибка проверки'], creationInfo: null, ipInfo: null });
         });
       } else {
         sendResponse({ verdict: 'unknown', reasons: ['Нет активной вкладки'], creationInfo: null, ipInfo: null });
@@ -465,15 +673,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// ===== Проверка email на утечки (через наш сервер → XposedOrNot) =====
+// ===== Проверка email (XposedOrNot через сервер) =====
 async function checkEmailBreaches(email) {
-  if (!email || !email.includes('@')) {
-    return { success: false, error: 'Некорректный email' };
-  }
+  if (!email || !email.includes('@')) return { success: false, error: 'Некорректный email' };
   try {
-    const res = await fetch(`${SERVER_URL}/api/hibp/email/${encodeURIComponent(email)}`, {
+    const res = await fetchWithTimeout(`${SERVER_URL}/api/hibp/email/${encodeURIComponent(email)}`, {
       headers: { 'Accept': 'application/json' }
-    });
+    }, 8000);
+    if (!res) return { success: false, error: 'Сервер недоступен' };
     if (res.status === 404) return { success: true, breaches: [] };
     if (!res.ok) return { success: false, error: 'Ошибка сервера' };
     const data = await res.json();
@@ -483,7 +690,7 @@ async function checkEmailBreaches(email) {
   }
 }
 
-// ===== Проверка пароля на утечки (k-Anonymity) =====
+// ===== Проверка пароля на утечки =====
 async function checkPasswordBreaches(password) {
   if (!password) return { success: false, error: 'Пустой пароль' };
   try {
@@ -492,14 +699,13 @@ async function checkPasswordBreaches(password) {
     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-
     const prefix = hashHex.substring(0, 5);
     const suffix = hashHex.substring(5);
 
-    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+    const res = await fetchWithTimeout(`https://api.pwnedpasswords.com/range/${prefix}`, {
       headers: { 'Accept': 'text/plain' }
-    });
-    if (!res.ok) return { success: false, error: 'API недоступен' };
+    }, 5000);
+    if (!res || !res.ok) return { success: false, error: 'API недоступен' };
     const text = await res.text();
     const lines = text.split('\n');
     for (const line of lines) {
@@ -518,12 +724,13 @@ async function checkPasswordBreaches(password) {
 async function syncWithServer() {
   try {
     const data = await new Promise(r => chrome.storage.local.get(['history'], r));
-    const res = await fetch(`${SERVER_URL}/api/check/sync`, {
+    const res = await fetchWithTimeout(`${SERVER_URL}/api/check/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ history: data.history || [] })
-    });
+    }, 8000);
+    if (!res) return { success: false, error: 'Сервер недоступен' };
     if (res.ok) return { success: true };
     if (res.status === 401) return { success: false, error: 'Войдите на сайте' };
     return { success: false, error: 'Ошибка сервера' };

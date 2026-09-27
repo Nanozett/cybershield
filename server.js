@@ -621,7 +621,24 @@ app.post('/api/check', (req, res) => {
 
   let verdict = 'safe';
   const reasons = [];
-  const BLACKLIST = ['phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru','casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru'];
+  const BLACKLIST = [
+  // Примеры / базовые
+  'phishing-example.com','malware-site.ru','free-vbucks.net','steam-communlty.com','sberbank-online-vhod.ru',
+  // Двойники case-battle
+  'casebatle.id','casbatle.com','casebattle.red','case-batlte.com','cases-batle.ru',
+  // Фишинг
+  'brevis.by','moneyatphone.top',
+  // Лотереи/опросы
+  'fastrefund.website','hmail1009.blogspot.nl','prizeme.com.ua','spleth.icu',
+  // SMS-разводы
+  'jugem.jp','100linksdvgpn.avafedors.freedomain.thehost.com.ua','6gyf.sionas.homelinux.org','driveron.ru','drivers.byethost16.com','files.truetds.icu','forum.jokke.ru','fqevj.kolomnatrud.ru','fsfll.fgawudownsyfuf.info','geforcesh.preumnoj.ru','gsmsignal.ru','hit-kino.com','hjpzt.rtk-sales.ru','ikbsk.bear-hunt.ru','maksiko.ru','msaav.radiofaiz.ru','opendrivers.ru','orav.info','pravoholding.ru','qsiub.atomproduction.ru','qwcxp.elcoleso.ru','vernaconsco.rutopik.ru','vihce.wilgood63.ru','xagoc.geo-meter.ru',
+  // Фейковые загрузки
+  'apponic.com','download-windows.org','downloadastro.com','1progs.ru','advanced-systemcare-com.ru','aktiv-windows.ucoz.com','andyroid.net','antikeys.org','bandicam-pro.ru','botdilofce.bandcamp.com','boxprograms.ru','chelcenter.ru','computta.com','crackheaps.com','crackpluskeygen.org','doublegames.ru','downloadelements.com','driveridentifier.com','drivers.org.ru','driverunpaid.ru','drp.su','filesdatabase4u.com','filehorse.com','freecrackpatch.com','fsm-portal.net','get.cryptobrowser.site','installpack.net','jeweell.com','kichkas.biz','kryptex.org','listid.ru','mediagetsite.com','mirsofta.ru','moiprogrammy.com','mwfix.ru','nikask.ru','nullthemedownload.com','nvidiadrivers.net','oneindir.com','oneprogs.ru','removal-virusguide.com','savow.com','serialms.com','smojem.ru','softkumir.ru','softportal.com','solvusoft.com','teramissu-hom.com','top-best-browser.ru','tvoiprogrammy.ru','ubar-pro4.ru','upantool.com','updatestar.com','vipmolik.net','virus4remove.com','w10-digital-activation-program.ru','winxpsoft.com','xeplayer.com','youtube.net.ua',
+  // Вирусы
+  'imei-poisk.ru','programmi-dlya-vzloma.com','17ebook.com','aladel.net','bpwhamburgorchardpark.org','clicnews.com','dfwdiesel.net','divineenterprises.net','fantasticfilms.ru','gardensrestaurantandcatering.com','ginedis.com','gncr.org','hdvideoforums.org','hihanin.com','kingfamilyphotoalbum.com','likaraoke.com','mactep.org','magic4you.nu','marbling.pe.kr','nacjalneg.info','pronline.ru','purplehoodie.com','qsng.cn','seksburada.net','sportsmansclub.net','stock888.cn','tathli.com','teamclouds.com','texaswhitetailfever.com','wadefamilytree.org','xnescat.info','yt118.com',
+  // Подозрительные
+  'unvesouver39238.weebly.com'
+];
   const SUSPICIOUS_PATTERNS = ['free-money','login-verify','account-confirm','paypal-secure','sberbank-online','gosuslugi-vhod'];
 
   if (BLACKLIST.some(b => cleanDomain.includes(b))) {
