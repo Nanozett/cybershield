@@ -71,7 +71,6 @@
     .container { max-width:1300px; margin:0 auto; padding:0 24px; }
     svg { display:inline-block; vertical-align:middle; fill:currentColor; width:1.2em; height:1.2em; }
 
-    /* ===== АНИМАЦИИ ===== */
     @keyframes fadeInScale {
       0% { opacity:0; transform:scale(0.95) translateY(20px); }
       100% { opacity:1; transform:scale(1) translateY(0); }
@@ -103,7 +102,6 @@
     .stagger-children > *:nth-child(5) { animation-delay:0.25s; }
     .stagger-children > *:nth-child(6) { animation-delay:0.30s; }
 
-    /* ===== ТОСТЫ ===== */
     #toast-container { position:fixed; top:80px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; }
     .toast { background:var(--toast-bg); color:var(--toast-text); padding:14px 24px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:250px; max-width:400px; animation:slideIn 0.3s ease; display:flex; align-items:center; gap:12px; border-left:4px solid var(--accent); }
     .toast.error { border-left-color:#e74c3c; }
@@ -112,7 +110,6 @@
     .toast .toast-close { background:none; border:none; color:var(--text-light); cursor:pointer; margin-left:auto; font-size:20px; }
     @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
 
-    /* ===== ХЕДЕР ===== */
     header { background:var(--header-bg); color:var(--header-text); padding:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15); position:sticky; top:0; z-index:100; transition:background 0.3s; }
     .header-flex { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .logo { font-size:26px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:8px; }
@@ -131,7 +128,6 @@
     .auth-buttons .register-btn:hover { background:var(--accent-hover); }
     .auth-buttons button svg { width:16px; height:16px; }
 
-    /* ===== ГЛАВНАЯ ===== */
     .hero {
       background: linear-gradient(135deg, var(--hero-bg-start), var(--hero-bg-end));
       background-size: 200% 200%;
@@ -391,7 +387,6 @@
     .status-rejected { background:#e74c3c; color:#fff; }
     .status-reviewed { background:#3498db; color:#fff; }
 
-    /* ===== РАСПИСАНИЕ ===== */
     .schedule-controls {
       display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
       background: var(--bg-card); padding: 16px; border-radius: 20px;
@@ -1449,10 +1444,7 @@
     // ===== РАСПИСАНИЕ =====
     let scheduleGroupsLoaded = false;
 
-    // === FALLBACK-СПИСОК ГРУПП КОЛЛЕДЖА ===
-    // Используется, если API не вернул ни одной группы (например, XLSX ещё не распарсен)
-    // === FALLBACK-СПИСОК ГРУПП КОЛЛЕДЖА ===
-    // Используется, если API не вернул ни одной группы (например, XLSX ещё не распарсен)
+    // Fallback-список групп колледжа
     const FALLBACK_GROUPS = [
       'КИТ-ТС-26-1',
       'КИТ-ТС-26-2',
@@ -1538,21 +1530,62 @@
       try {
         const res = await fetch(`/api/schedule?group=${encodeURIComponent(group)}&date=${date}`);
         const data = await res.json();
+
+        // Если API вернул ошибку — показываем её прямо на странице
+        if (!res.ok || data.error) {
+          container.innerHTML = `
+            <div class="schedule-day-header" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
+              <div>
+                <div class="schedule-day-title">Не удалось загрузить расписание</div>
+                <div class="schedule-day-meta">${escapeHtml(data.error || 'Неизвестная ошибка')}</div>
+              </div>
+              <div class="schedule-day-count">⚠️</div>
+            </div>
+            <div class="empty-day">
+              <div class="empty-day-icon">🔌</div>
+              <div class="empty-day-text">
+                Проверь:<br>
+                1) <a href="/api/schedule/debug" target="_blank">/api/schedule/debug</a> — что видит сервер<br>
+                2) <a href="/api/schedule/raw" target="_blank">/api/schedule/raw</a> — структура XLSX<br>
+                3) Логи Vercel
+              </div>
+            </div>
+          `;
+          console.error('API error:', data);
+          return;
+        }
+
         renderSchedule(data);
       } catch (e) {
-        container.innerHTML = '<div class="empty-day"><div class="empty-day-text">Ошибка загрузки</div></div>';
+        console.error('Ошибка загрузки', e);
+        container.innerHTML = `
+          <div class="empty-day">
+            <div class="empty-day-icon">❌</div>
+            <div class="empty-day-text">Ошибка соединения с сервером</div>
+          </div>
+        `;
       }
     }
 
     function renderSchedule(data) {
       const container = document.getElementById('scheduleContent');
 
-      if (!data.pairs || data.pairs.length === 0) {
+      // Защита от undefined
+      const dayName = data.dayName || '—';
+      const group = data.group || '—';
+      let dateStr = '—';
+      try {
+        if (data.date) dateStr = new Date(data.date).toLocaleDateString('ru-RU');
+      } catch (e) {}
+
+      const pairs = Array.isArray(data.pairs) ? data.pairs : [];
+
+      if (pairs.length === 0) {
         container.innerHTML = `
           <div class="schedule-day-header">
             <div>
-              <div class="schedule-day-title">${data.dayName}</div>
-              <div class="schedule-day-meta">${data.group} • ${new Date(data.date).toLocaleDateString('ru-RU')}</div>
+              <div class="schedule-day-title">${escapeHtml(dayName)}</div>
+              <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}</div>
             </div>
             <div class="schedule-day-count">Пар нет</div>
           </div>
@@ -1564,27 +1597,27 @@
         return;
       }
 
-      const pairsHtml = data.pairs.map(p => `
+      const pairsHtml = pairs.map(p => `
         <div class="pair-card">
-          <div class="pair-number">${p.pair_number}</div>
+          <div class="pair-number">${p.pair_number || '—'}</div>
           <div class="pair-info">
-            <div class="pair-subject">${escapeHtml(p.subject)}</div>
+            <div class="pair-subject">${escapeHtml(p.subject || '—')}</div>
             <div class="pair-details">
-              <span>👤 ${escapeHtml(p.teacher)}</span>
-              <span>🚪 Ауд. ${escapeHtml(p.room)}</span>
+              <span>👤 ${escapeHtml(p.teacher || '—')}</span>
+              <span>🚪 Ауд. ${escapeHtml(p.room || '—')}</span>
             </div>
           </div>
-          <div class="pair-time">${p.start_time} — ${p.end_time}</div>
+          <div class="pair-time">${escapeHtml(p.start_time || '—')} — ${escapeHtml(p.end_time || '—')}</div>
         </div>
       `).join('');
 
       container.innerHTML = `
         <div class="schedule-day-header">
           <div>
-            <div class="schedule-day-title">${data.dayName}</div>
-            <div class="schedule-day-meta">${data.group} • ${new Date(data.date).toLocaleDateString('ru-RU')}</div>
+            <div class="schedule-day-title">${escapeHtml(dayName)}</div>
+            <div class="schedule-day-meta">${escapeHtml(group)} • ${dateStr}</div>
           </div>
-          <div class="schedule-day-count">${data.pairs.length} ${declOfNum(data.pairs.length, ['пара', 'пары', 'пар'])}</div>
+          <div class="schedule-day-count">${pairs.length} ${declOfNum(pairs.length, ['пара', 'пары', 'пар'])}</div>
         </div>
         ${pairsHtml}
       `;
@@ -1625,6 +1658,17 @@
       try {
         const res = await fetch(`/api/schedule/analyze?group=${encodeURIComponent(group)}`);
         const data = await res.json();
+
+        if (!res.ok || data.error || !Array.isArray(data.days)) {
+          container.innerHTML = `
+            <div class="empty-day">
+              <div class="empty-day-icon">⚠️</div>
+              <div class="empty-day-text">${escapeHtml(data.error || 'Не удалось проанализировать расписание')}</div>
+            </div>
+          `;
+          return;
+        }
+
         renderAnalysis(data);
       } catch (e) {
         container.innerHTML = '<div class="empty-day"><div class="empty-day-text">Ошибка анализа</div></div>';
@@ -1656,7 +1700,7 @@
       container.innerHTML = `
         <div class="analysis-recommendation">
           <h3>💼 ${escapeHtml(data.bestDay ? 'Лучший день для работы' : 'Рекомендация')}</h3>
-          <p>${escapeHtml(data.recommendation)}</p>
+          <p>${escapeHtml(data.recommendation || 'Нет данных для анализа.')}</p>
         </div>
         ${daysHtml}
       `;
