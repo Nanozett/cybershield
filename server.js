@@ -515,9 +515,12 @@ function extractGroupName(s) {
 }
 
 // Парсит лист XLSX и возвращает { groupName: [pairs] }
+// Важно: строки-продолжения (та же пара, но без времени в колонке B) наследуют последнее время.
 function parseScheduleSheet(rows) {
   const result = {};
   let currentGroup = null;
+  let lastStart = null;
+  let lastEnd = null;
   const DAY_ABBRS = /^(СБ|ПН|ВТ|СР|ЧТ|ПТ|ВС)$/i;
   const TIME_RANGE = /^\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}$/;
 
@@ -529,7 +532,7 @@ function parseScheduleSheet(rows) {
     const E = String(row[4] || '').trim();
     const F = String(row[5] || '').trim();
 
-    // Строка-заголовок группы: A заполнена, B пуста, A — не день недели
+    // Заголовок группы: A заполнено, B пусто, A — не день недели
     if (A && !B && !DAY_ABBRS.test(A)) {
       if (/^Расписани/i.test(A)) continue;
       if (/^Курс\s+\d+/i.test(A)) continue;
@@ -541,22 +544,26 @@ function parseScheduleSheet(rows) {
       continue;
     }
 
-    if (!TIME_RANGE.test(B)) continue;
-    if (!currentGroup) continue;
-    if (!C) continue; // окно
+    // Если в строке есть время — запоминаем
+    if (TIME_RANGE.test(B)) {
+      const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
+      if (tm) {
+        lastStart = `${tm[1].padStart(2,'0')}:${tm[2]}`;
+        lastEnd = `${tm[3].padStart(2,'0')}:${tm[4]}`;
+      }
+    }
 
-    const tm = B.match(/^(\d{1,2})[:.](\d{2})\s*[-–—]\s*(\d{1,2})[:.](\d{2})$/);
-    if (!tm) continue;
-    const startTime = `${tm[1].padStart(2,'0')}:${tm[2]}`;
-    const endTime = `${tm[3].padStart(2,'0')}:${tm[4]}`;
+    if (!currentGroup) continue;
+    if (!C) continue;          // пустая ячейка/окно
+    if (!lastStart) continue;  // ещё не было ни одной пары с временем
 
     result[currentGroup].push({
-      pair_number: startTimeToSlot(startTime),
+      pair_number: startTimeToSlot(lastStart),
       subject: C,
       teacher: E || '—',
       room: F || '—',
-      start_time: startTime,
-      end_time: endTime
+      start_time: lastStart,
+      end_time: lastEnd
     });
   }
   return result;
