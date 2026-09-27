@@ -184,7 +184,7 @@
     .hero-stats .number { font-size:36px; font-weight:700; color:var(--accent); line-height:1; }
     .hero-stats .label { font-size:14px; opacity:0.7; margin-top:4px; }
 
-    /* Рекламный баннер расширения на главной */
+    /* Рекламный баннер расширения */
     .extension-promo {
       background: linear-gradient(135deg, #1a2e44, #0b1a2e);
       border-radius: 30px;
@@ -394,6 +394,98 @@
     .status-rejected { background:#e74c3c; color:#fff; }
     .status-reviewed { background:#3498db; color:#fff; }
 
+    /* ===== РАСПИСАНИЕ ===== */
+    .schedule-controls {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+      background: var(--bg-card); padding: 16px; border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+    .schedule-input {
+      padding: 12px 16px; border-radius: 12px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg); color: var(--text-primary);
+      font-size: 15px; min-width: 180px; font-family: inherit;
+    }
+    .schedule-input:focus { outline: none; border-color: var(--accent); }
+    .schedule-btn {
+      padding: 12px 24px; background: var(--accent); color: white;
+      border: none; border-radius: 12px; font-weight: 700;
+      font-size: 15px; cursor: pointer; transition: 0.2s;
+    }
+    .schedule-btn:hover { background: var(--accent-hover); }
+    .schedule-btn.secondary { background: var(--header-bg); }
+    .schedule-btn.secondary:hover { opacity: 0.85; }
+
+    .schedule-day-header {
+      background: linear-gradient(135deg, #0b1a2e, #1a3a5e);
+      color: white; padding: 20px 24px; border-radius: 20px;
+      margin-bottom: 20px; display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+    .schedule-day-title { font-size: 22px; font-weight: 800; }
+    .schedule-day-meta { font-size: 14px; opacity: 0.85; }
+    .schedule-day-count {
+      background: rgba(255,255,255,0.15); padding: 6px 16px;
+      border-radius: 30px; font-weight: 700; font-size: 14px;
+    }
+
+    .pair-card {
+      background: var(--bg-card); border-radius: 18px; padding: 18px 22px;
+      margin-bottom: 12px; box-shadow: var(--shadow);
+      display: flex; gap: 18px; align-items: center;
+      transition: 0.2s; border-left: 5px solid var(--accent);
+    }
+    .pair-card:hover { transform: translateX(4px); box-shadow: var(--shadow-hover); }
+    .pair-number {
+      width: 54px; height: 54px; border-radius: 14px;
+      background: var(--accent); color: white; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; flex-shrink: 0;
+    }
+    .pair-info { flex: 1; }
+    .pair-subject { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); }
+    .pair-details { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); }
+    .pair-details span { display: flex; align-items: center; gap: 4px; }
+    .pair-time { font-size: 15px; font-weight: 700; color: var(--accent); text-align: right; min-width: 130px; }
+
+    .empty-day {
+      text-align: center; padding: 60px 20px; background: var(--bg-card);
+      border-radius: 20px; box-shadow: var(--shadow);
+    }
+    .empty-day-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-day-text { font-size: 18px; color: var(--text-secondary); }
+
+    .analysis-recommendation {
+      background: linear-gradient(135deg, #0b7e3d, #10b981);
+      color: white; padding: 24px 28px; border-radius: 20px;
+      margin-bottom: 24px; box-shadow: var(--shadow-hover);
+    }
+    .analysis-recommendation h3 { font-size: 20px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .analysis-recommendation p { font-size: 16px; opacity: 0.95; }
+
+    .day-analysis-card {
+      background: var(--bg-card); border-radius: 18px; padding: 18px 22px;
+      margin-bottom: 12px; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 16px;
+      border-left: 5px solid #94a3b8; transition: 0.2s;
+    }
+    .day-analysis-card:hover { transform: translateX(4px); box-shadow: var(--shadow-hover); }
+    .day-analysis-card.best { border-left-color: #10b981; background: linear-gradient(to right, rgba(16,185,129,0.08), transparent); }
+    .day-analysis-card.good { border-left-color: #3b82f6; }
+    .day-analysis-card.medium { border-left-color: #f39c12; }
+    .day-analysis-card.hard { border-left-color: #e74c3c; }
+    .day-analysis-card.free { border-left-color: #cbd5e1; opacity: 0.65; }
+    .day-analysis-name { font-size: 17px; font-weight: 800; min-width: 130px; color: var(--text-primary); }
+    .day-analysis-stats { flex: 1; font-size: 13px; color: var(--text-secondary); display: flex; gap: 16px; flex-wrap: wrap; }
+    .day-analysis-verdict {
+      font-size: 12px; padding: 4px 14px; border-radius: 20px;
+      font-weight: 700; background: var(--badge-bg); color: var(--badge-text);
+      white-space: nowrap;
+    }
+    .day-analysis-card.best .day-analysis-verdict { background: #d1fae5; color: #065f46; }
+    .day-analysis-card.hard .day-analysis-verdict { background: #fee2e2; color: #991b1b; }
+    .day-analysis-card.medium .day-analysis-verdict { background: #fef3c7; color: #92400e; }
+
     @media (max-width:768px) {
       .header-flex { flex-direction:column; gap:12px; }
       .header-controls { width:100%; justify-content:center; flex-wrap:wrap; }
@@ -410,12 +502,17 @@
       #toast-container { right:10px; left:10px; }
       .toast { max-width:100%; }
       .extension-promo { flex-direction:column; text-align:center; gap:20px; }
+      .schedule-controls { flex-direction: column; }
+      .schedule-input { min-width: 100%; }
+      .pair-card { flex-wrap: wrap; }
+      .pair-time { min-width: auto; text-align: left; }
+      .day-analysis-card { flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
 
-<!-- ===== SVG СПРАЙТ (сокращён для читаемости, все символы есть) ===== -->
+<!-- ===== SVG СПРАЙТ ===== -->
 <svg style="display:none;" xmlns="http://www.w3.org/2000/svg">
   <symbol id="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1"/></symbol>
   <symbol id="user-secret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M9 11l2 2 4-4"/></symbol>
@@ -447,9 +544,10 @@
   <symbol id="lock-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 019.9-1"/></symbol>
   <symbol id="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 002-2V2H7v2a2 2 0 002 2h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></symbol>
   <symbol id="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
 </svg>
 
-<!-- ===== ТОСТ-КОНТЕЙНЕР ===== -->
 <div id="toast-container"></div>
 
 <!-- ===== ХЕДЕР ===== -->
@@ -462,6 +560,8 @@
         <a data-page="methods"><svg><use href="#user-secret"/></svg> Методики</a>
         <a data-page="software"><svg><use href="#list"/></svg> Программы</a>
         <a data-page="forum"><svg><use href="#message-circle"/></svg> Форум</a>
+        <a data-page="schedule"><svg><use href="#calendar"/></svg> Расписание</a>
+        <a data-page="analysis"><svg><use href="#chart"/></svg> Анализ</a>
         <a data-page="extension"><svg><use href="#puzzle"/></svg> Расширение</a>
         <a data-page="submit"><svg><use href="#plus-circle"/></svg> Предложить</a>
         <a data-page="submissions"><svg><use href="#list"/></svg> Заявки</a>
@@ -587,7 +687,37 @@
     </div>
   </div>
 
-  <!-- ===== РАСШИРЕНИЕ (исправленная кнопка) ===== -->
+  <!-- РАСПИСАНИЕ -->
+  <div class="page" id="page-schedule">
+    <div class="container">
+      <div class="page-title"><svg><use href="#calendar"/></svg> Расписание занятий</div>
+      <div class="schedule-controls">
+        <select id="scheduleGroup" class="schedule-input">
+          <option value="">Выберите группу</option>
+        </select>
+        <input type="date" id="scheduleDate" class="schedule-input">
+        <button id="scheduleLoadBtn" class="schedule-btn">📅 Показать</button>
+        <button id="scheduleTodayBtn" class="schedule-btn secondary">Сегодня</button>
+      </div>
+      <div id="scheduleContent"></div>
+    </div>
+  </div>
+
+  <!-- АНАЛИЗ РАСПИСАНИЯ -->
+  <div class="page" id="page-analysis">
+    <div class="container">
+      <div class="page-title"><svg><use href="#chart"/></svg> Анализ расписания</div>
+      <div class="schedule-controls">
+        <select id="analysisGroup" class="schedule-input">
+          <option value="">Выберите группу</option>
+        </select>
+        <button id="analysisLoadBtn" class="schedule-btn">📊 Анализировать</button>
+      </div>
+      <div id="analysisContent"></div>
+    </div>
+  </div>
+
+  <!-- РАСШИРЕНИЕ -->
   <div class="page" id="page-extension">
     <div class="container">
       <div class="extension-box">
@@ -600,18 +730,17 @@
             <li><svg><use href="#check-circle"/></svg> Автоматическое обновление угроз</li>
             <li><svg><use href="#check-circle"/></svg> Режим «Инкогнито+»</li>
           </ul>
-<a href="/kibershit_extension.zip" download class="download-btn">
-  <svg><use href="#download"/></svg> Скачать расширение (ZIP)
-</a>
+          <a href="/kibershit_extension.zip" download class="download-btn">
+            <svg><use href="#download"/></svg> Скачать расширение (ZIP)
+          </a>
           <div class="download-instructions">
             <details>
               <summary>📖 Инструкция по установке</summary>
               <ol>
-                <li>Скачайте файл <strong>kibershit_extension.crx</strong>.</li>
-                <li>Откройте браузер и перейдите на страницу расширений: <code>chrome://extensions/</code> (для Edge: <code>edge://extensions/</code>).</li>
+                <li>Скачайте ZIP-архив и распакуйте его в любую папку.</li>
+                <li>Откройте Chrome и перейдите на страницу <code>chrome://extensions/</code>.</li>
                 <li>Включите <strong>«Режим разработчика»</strong> (переключатель в правом верхнем углу).</li>
-                <li>Перетащите скачанный файл <strong>.crx</strong> в окно расширений.</li>
-                <li>Подтвердите установку в появившемся диалоге.</li>
+                <li>Нажмите <strong>«Загрузить распакованное расширение»</strong> и выберите папку, куда вы распаковали архив.</li>
                 <li>Готово! Иконка КиберЩит появится на панели браузера.</li>
               </ol>
             </details>
@@ -620,7 +749,7 @@
         </div>
         <div class="extension-mock">
           <svg><use href="#shield"/></svg>
-          <div style="margin-top:10px;">v2.4.1</div>
+          <div style="margin-top:10px;">v4.5</div>
           <div style="font-size:13px; opacity:0.7;">2,3k установок</div>
         </div>
       </div>
@@ -716,6 +845,8 @@
       software: document.getElementById('page-software'),
       forum: document.getElementById('page-forum'),
       'topic-view': document.getElementById('page-topic-view'),
+      schedule: document.getElementById('page-schedule'),
+      analysis: document.getElementById('page-analysis'),
       extension: document.getElementById('page-extension'),
       profile: document.getElementById('page-profile'),
       submit: document.getElementById('page-submit'),
@@ -731,6 +862,8 @@
       if (pageId === 'forum') loadTopics();
       if (pageId === 'profile') loadProfile();
       if (pageId === 'submissions') loadSubmissions();
+      if (pageId === 'schedule') initSchedulePage();
+      if (pageId === 'analysis') initAnalysisPage();
       if (pageId === 'topic-view' && params && params.topicId) {
         localStorage.setItem('currentTopicId', params.topicId);
         loadTopicView(params.topicId);
@@ -1316,6 +1449,170 @@
       showPage('submit');
     });
 
+    // ===== РАСПИСАНИЕ =====
+    let scheduleGroupsLoaded = false;
+
+    async function initSchedulePage() {
+      if (!scheduleGroupsLoaded) {
+        try {
+          const res = await fetch('/api/groups');
+          const groups = await res.json();
+          const sel = document.getElementById('scheduleGroup');
+          sel.innerHTML = '<option value="">Выберите группу</option>' +
+            groups.map(g => `<option value="${g}">${g}</option>`).join('');
+          scheduleGroupsLoaded = true;
+        } catch (e) { console.error('Ошибка загрузки групп', e); }
+      }
+
+      const dateInput = document.getElementById('scheduleDate');
+      if (!dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+
+      document.getElementById('scheduleLoadBtn').onclick = loadSchedule;
+      document.getElementById('scheduleTodayBtn').onclick = () => {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+        loadSchedule();
+      };
+    }
+
+    async function loadSchedule() {
+      const group = document.getElementById('scheduleGroup').value;
+      const date = document.getElementById('scheduleDate').value;
+      const container = document.getElementById('scheduleContent');
+      if (!group) return showToast('Выберите группу', 'error');
+      if (!date) return showToast('Выберите дату', 'error');
+
+      container.innerHTML = '<div class="empty-day"><div class="empty-day-text">⏳ Загрузка...</div></div>';
+
+      try {
+        const res = await fetch(`/api/schedule?group=${encodeURIComponent(group)}&date=${date}`);
+        const data = await res.json();
+        renderSchedule(data);
+      } catch (e) {
+        container.innerHTML = '<div class="empty-day"><div class="empty-day-text">Ошибка загрузки</div></div>';
+      }
+    }
+
+    function renderSchedule(data) {
+      const container = document.getElementById('scheduleContent');
+
+      if (!data.pairs || data.pairs.length === 0) {
+        container.innerHTML = `
+          <div class="schedule-day-header">
+            <div>
+              <div class="schedule-day-title">${data.dayName}</div>
+              <div class="schedule-day-meta">${data.group} • ${new Date(data.date).toLocaleDateString('ru-RU')}</div>
+            </div>
+            <div class="schedule-day-count">Пар нет</div>
+          </div>
+          <div class="empty-day">
+            <div class="empty-day-icon">🎉</div>
+            <div class="empty-day-text">В этот день пар нет — можно отдохнуть!</div>
+          </div>
+        `;
+        return;
+      }
+
+      const pairsHtml = data.pairs.map(p => `
+        <div class="pair-card">
+          <div class="pair-number">${p.pair_number}</div>
+          <div class="pair-info">
+            <div class="pair-subject">${escapeHtml(p.subject)}</div>
+            <div class="pair-details">
+              <span>👤 ${escapeHtml(p.teacher)}</span>
+              <span>🚪 Ауд. ${escapeHtml(p.room)}</span>
+            </div>
+          </div>
+          <div class="pair-time">${p.start_time} — ${p.end_time}</div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="schedule-day-header">
+          <div>
+            <div class="schedule-day-title">${data.dayName}</div>
+            <div class="schedule-day-meta">${data.group} • ${new Date(data.date).toLocaleDateString('ru-RU')}</div>
+          </div>
+          <div class="schedule-day-count">${data.pairs.length} ${declOfNum(data.pairs.length, ['пара', 'пары', 'пар'])}</div>
+        </div>
+        ${pairsHtml}
+      `;
+    }
+
+    // ===== АНАЛИЗ =====
+    let analysisGroupsLoaded = false;
+
+    async function initAnalysisPage() {
+      if (!analysisGroupsLoaded) {
+        try {
+          const res = await fetch('/api/groups');
+          const groups = await res.json();
+          const sel = document.getElementById('analysisGroup');
+          sel.innerHTML = '<option value="">Выберите группу</option>' +
+            groups.map(g => `<option value="${g}">${g}</option>`).join('');
+          analysisGroupsLoaded = true;
+        } catch (e) { console.error('Ошибка загрузки групп', e); }
+      }
+      document.getElementById('analysisLoadBtn').onclick = loadAnalysis;
+    }
+
+    async function loadAnalysis() {
+      const group = document.getElementById('analysisGroup').value;
+      const container = document.getElementById('analysisContent');
+      if (!group) return showToast('Выберите группу', 'error');
+
+      container.innerHTML = '<div class="empty-day"><div class="empty-day-text">⏳ Анализируем...</div></div>';
+
+      try {
+        const res = await fetch(`/api/schedule/analyze?group=${encodeURIComponent(group)}`);
+        const data = await res.json();
+        renderAnalysis(data);
+      } catch (e) {
+        container.innerHTML = '<div class="empty-day"><div class="empty-day-text">Ошибка анализа</div></div>';
+      }
+    }
+
+    function renderAnalysis(data) {
+      const container = document.getElementById('analysisContent');
+      const cardClass = (day) => {
+        if (day.count === 0) return 'free';
+        if (data.bestDay && day.dayOfWeek === data.bestDay.dayOfWeek) return 'best';
+        if (day.count <= 2) return 'good';
+        if (day.count <= 3) return 'medium';
+        return 'hard';
+      };
+
+      const daysHtml = data.days.map(d => `
+        <div class="day-analysis-card ${cardClass(d)}">
+          <div class="day-analysis-name">${d.dayName}</div>
+          <div class="day-analysis-stats">
+            <span>📚 ${d.count} ${declOfNum(d.count, ['пара', 'пары', 'пар'])}</span>
+            ${d.firstStart ? `<span>🕐 ${d.firstStart} — ${d.lastEnd}</span>` : ''}
+            ${d.gaps > 0 ? `<span>⏳ ${d.gaps} ${declOfNum(d.gaps, ['окно', 'окна', 'окон'])}</span>` : ''}
+          </div>
+          <div class="day-analysis-verdict">${d.verdict}</div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="analysis-recommendation">
+          <h3>💼 ${escapeHtml(data.bestDay ? 'Лучший день для работы' : 'Рекомендация')}</h3>
+          <p>${escapeHtml(data.recommendation)}</p>
+        </div>
+        ${daysHtml}
+      `;
+    }
+
+    function declOfNum(n, titles) {
+      const cases = [2, 0, 1, 1, 1, 2];
+      return titles[(n % 100 > 4 && n % 100 < 20) ? 2 : cases[(n % 10 < 5) ? n % 10 : 5]];
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     // ===== МОДАЛКИ =====
     const loginModal = document.getElementById('loginModal');
     const registerModal = document.getElementById('registerModal');
@@ -1373,10 +1670,6 @@
         } else showToast(data.error || 'Ошибка входа', 'error');
       } catch(e) { showToast('Ошибка сервера', 'error'); }
     });
-
-    // ===== СКАЧИВАНИЕ РАСШИРЕНИЯ (уже не нужно, ссылка работает) =====
-    // Убираем старый обработчик, чтобы не конфликтовал
-    // Кнопка теперь ссылка, поэтому ничего не делаем
 
     // ===== ИНИЦИАЛИЗАЦИЯ =====
     checkAuth();
