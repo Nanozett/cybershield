@@ -31,7 +31,6 @@
     .container { max-width:1300px; margin:0 auto; padding:0 24px; }
     svg { display:inline-block; vertical-align:middle; fill:currentColor; width:1.2em; height:1.2em; }
 
-    /* ===== БАЗОВЫЕ АНИМАЦИИ ===== */
     @keyframes fadeInScale { 0% { opacity:0; transform:scale(0.95) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
     @keyframes float { 0% { transform:translateY(0px); } 50% { transform:translateY(-10px); } 100% { transform:translateY(0px); } }
     @keyframes gradientMove { 0% { background-position:0% 50%; } 50% { background-position:100% 50%; } 100% { background-position:0% 50%; } }
@@ -54,7 +53,6 @@
     .toast .toast-close { background:none; border:none; color:var(--text-light); cursor:pointer; margin-left:auto; font-size:20px; }
     @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
 
-    /* ===== ХЕДЕР ===== */
     header { background:var(--header-bg); color:var(--header-text); padding:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15); position:sticky; top:0; z-index:100; transition:background 0.3s; }
     .header-flex { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .logo { font-size:26px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:8px; }
@@ -73,7 +71,6 @@
     .auth-buttons .register-btn:hover { background:var(--accent-hover); }
     .auth-buttons button svg { width:16px; height:16px; }
 
-    /* ===== HERO ===== */
     .hero { background: linear-gradient(135deg, var(--hero-bg-start), var(--hero-bg-end)); background-size: 200% 200%; animation: gradientMove 6s ease infinite; color: white; padding: 80px 40px; border-radius: 40px; margin-bottom: 60px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
     .hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%); border-radius: 50%; pointer-events: none; animation: float 8s ease-in-out infinite; }
     .hero::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none; animation: float 10s ease-in-out infinite reverse; }
@@ -84,28 +81,17 @@
     .hero .btn-primary { background:var(--accent); color:white; border:none; padding:16px 44px; border-radius:60px; font-size:20px; font-weight:700; cursor:pointer; transition:all 0.3s; box-shadow:0 8px 0 #1e3a6b; display:inline-flex; align-items:center; gap:12px; animation: float 3s ease-in-out infinite; }
     .hero .btn-primary:hover { background:var(--accent-hover); transform:translateY(-4px) scale(1.02); box-shadow:0 12px 0 #1a335a; }
     .hero .btn-primary svg { width:24px; height:24px; }
-    .hero-stats { display:flex; justify-content:center; gap:60px; margin-top:40px; animation: fadeInScale 1s ease; }
+    .hero-stats { display:flex; justify-content:center; gap:60px; margin-top:40px; animation: fadeInScale 1s ease; flex-wrap:wrap; }
     .hero-stats div { text-align:center; }
     .hero-stats .number { font-size:36px; font-weight:700; color:var(--accent); line-height:1; }
     .hero-stats .label { font-size:14px; opacity:0.7; margin-top:4px; }
 
-    /* ===== ВАУ-ЭФФЕКТЫ НА ГЛАВНОЙ ===== */
-    @keyframes blobFloat {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(40px, -30px) scale(1.1); }
-      66% { transform: translate(-30px, 40px) scale(0.95); }
-    }
-    @keyframes pulseGlow {
-      0%, 100% { box-shadow: 0 8px 0 #1e3a6b, 0 0 20px rgba(59,130,246,0.4); }
-      50% { box-shadow: 0 8px 0 #1e3a6b, 0 0 40px rgba(59,130,246,0.85); }
-    }
+    @keyframes blobFloat { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(40px, -30px) scale(1.1); } 66% { transform: translate(-30px, 40px) scale(0.95); } }
+    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 8px 0 #1e3a6b, 0 0 20px rgba(59,130,246,0.4); } 50% { box-shadow: 0 8px 0 #1e3a6b, 0 0 40px rgba(59,130,246,0.85); } }
     @keyframes typewriter { from { width: 0; } to { width: 100%; } }
     @keyframes blink { 50% { border-color: transparent; } }
     @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
-    @keyframes iconFloat {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      50% { transform: translateY(-6px) rotate(6deg); }
-    }
+    @keyframes iconFloat { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(6deg); } }
 
     .hero-blobs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; border-radius: 40px; }
     .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; will-change: transform; }
@@ -113,53 +99,18 @@
     .blob-2 { width: 360px; height: 360px; background: radial-gradient(circle, #8b5cf6, transparent 70%); bottom: -100px; left: -100px; animation: blobFloat 15s ease-in-out infinite reverse; }
     .blob-3 { width: 320px; height: 320px; background: radial-gradient(circle, #06b6d4, transparent 70%); top: 35%; left: 40%; animation: blobFloat 10s ease-in-out infinite; }
 
-    .hero-grid {
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(59,130,246,0.10) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.10) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none; z-index: 1;
-      -webkit-mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
-      mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
-      animation: gridMove 20s linear infinite;
-      border-radius: 40px;
-    }
+    .hero-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(59,130,246,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.10) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 1; -webkit-mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%); mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%); animation: gridMove 20s linear infinite; border-radius: 40px; }
 
-    .hero-spotlight {
-      position: absolute; inset: 0;
-      pointer-events: none; z-index: 2;
-      background: radial-gradient(circle 280px at var(--mx, 50%) var(--my, 50%),
-        rgba(59,130,246,0.22), transparent 70%);
-      opacity: 0; transition: opacity 0.3s;
-      border-radius: 40px;
-    }
+    .hero-spotlight { position: absolute; inset: 0; pointer-events: none; z-index: 2; background: radial-gradient(circle 280px at var(--mx, 50%) var(--my, 50%), rgba(59,130,246,0.22), transparent 70%); opacity: 0; transition: opacity 0.3s; border-radius: 40px; }
     .hero:hover .hero-spotlight { opacity: 1; }
 
-    .hero-cursor {
-      position: absolute; width: 24px; height: 24px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(59,130,246,0.5), transparent 70%);
-      pointer-events: none; z-index: 5;
-      mix-blend-mode: screen;
-      transform: translate(-50%, -50%);
-      opacity: 0; transition: opacity 0.25s;
-      will-change: left, top;
-    }
+    .hero-cursor { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(59,130,246,0.5), transparent 70%); pointer-events: none; z-index: 5; mix-blend-mode: screen; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.25s; will-change: left, top; }
     .hero:hover .hero-cursor { opacity: 1; }
 
     .hero .hero-content { transition: transform 0.15s ease-out; will-change: transform; }
     .hero .btn-primary { animation: float 3s ease-in-out infinite, pulseGlow 2.5s ease-in-out infinite !important; }
 
-    .hero h1 .tw {
-      display: inline-block;
-      overflow: hidden;
-      white-space: nowrap;
-      border-right: 3px solid var(--accent);
-      max-width: 0;
-      vertical-align: bottom;
-      animation: typewriter 2s steps(20) 0.4s forwards, blink 0.75s step-end infinite;
-    }
+    .hero h1 .tw { display: inline-block; overflow: hidden; white-space: nowrap; border-right: 3px solid var(--accent); max-width: 0; vertical-align: bottom; animation: typewriter 2s steps(20) 0.4s forwards, blink 0.75s step-end infinite; }
     .hero h1 .tw.done { border-right: none; }
 
     .reveal { opacity: 0; transform: translateY(36px); transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -171,7 +122,12 @@
     .method-card:hover, .software-card:hover { box-shadow: var(--shadow-hover), 0 0 0 1px rgba(59,130,246,0.4); }
     .hero-stats .number { display: inline-block; transition: transform 0.3s; }
 
-    /* ===== ПРОЧЕЕ ===== */
+    .live-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(46,204,113,0.18); color: #2ecc71; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+    .live-badge .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #2ecc71; animation: livePulse 1.5s ease-in-out infinite; }
+    @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(46,204,113,0.7); } 50% { opacity: 0.6; transform: scale(1.2); box-shadow: 0 0 0 8px rgba(46,204,113,0); } }
+    .hero-stats .number.flash { animation: numberFlash 0.7s ease; }
+    @keyframes numberFlash { 0% { color: #2ecc71; transform: scale(1.1); } 100% { color: inherit; transform: scale(1); } }
+
     .extension-promo { background: linear-gradient(135deg, #1a2e44, #0b1a2e); border-radius: 30px; padding: 40px 40px; margin: 40px 0 30px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; box-shadow: 0 12px 40px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; animation: fadeInScale 1s ease; }
     .extension-promo:hover { transform:scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.3); }
     .extension-promo-text { color:white; max-width:600px; }
@@ -296,7 +252,6 @@
     .status-rejected { background:#e74c3c; color:#fff; }
     .status-reviewed { background:#3498db; color:#fff; }
 
-    /* ===== РАСПИСАНИЕ ===== */
     .schedule-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; background: var(--bg-card); padding: 16px; border-radius: 20px; box-shadow: var(--shadow); }
     .schedule-input { padding: 12px 16px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 15px; min-width: 180px; font-family: inherit; }
     .schedule-input:focus { outline: none; border-color: var(--accent); }
@@ -339,7 +294,6 @@
     .day-analysis-card.hard .day-analysis-verdict { background: #fee2e2; color: #991b1b; }
     .day-analysis-card.medium .day-analysis-verdict { background: #fef3c7; color: #92400e; }
 
-    /* ===== UPLOAD ===== */
     .upload-box { max-width: 640px; margin: 0 auto; background: var(--bg-card); padding: 32px; border-radius: 28px; box-shadow: var(--shadow); }
     .upload-field { margin-bottom: 16px; }
     .upload-field label { font-weight: 600; display: block; margin-bottom: 6px; }
@@ -360,14 +314,99 @@
     .upload-auth-warn { display: none; background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 16px; margin-bottom: 16px; font-weight: 600; }
     .upload-auth-warn.show { display: block; }
 
-    /* ===== ФОРУМ COOLDOWN ===== */
     .char-counter { font-size: 11px; color: var(--text-light); text-align: right; margin-top: -6px; margin-bottom: 8px; font-family: 'Courier New', monospace; }
     .char-counter.warn { color: #f39c12; }
     .char-counter.over { color: #e74c3c; font-weight: 700; }
     #topicCooldownInfo { display: none; padding: 10px 14px; background: #fee2e2; color: #991b1b; border-radius: 14px; font-size: 13px; font-weight: 600; margin-top: 4px; text-align: center; }
     #submitTopicBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
-    /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
+    /* ===== СКАНЕР ===== */
+    .scanner-box { max-width: 720px; margin: 0 auto; background: var(--bg-card); padding: 32px; border-radius: 28px; box-shadow: var(--shadow); }
+    .scanner-input-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .scanner-input-row input { flex: 1; padding: 16px 20px; border-radius: 40px; border: 2px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 16px; font-family: inherit; min-width: 200px; transition: border-color 0.2s; }
+    .scanner-input-row input:focus { outline: none; border-color: var(--accent); }
+    .scanner-btn { background: var(--accent); color: white; border: none; padding: 16px 32px; border-radius: 40px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .scanner-btn:hover { background: var(--accent-hover); transform: scale(1.02); }
+    .scanner-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .scanner-btn svg { width: 18px; height: 18px; }
+    .scan-progress { display: none; margin-top: 20px; }
+    .scan-progress.active { display: block; }
+    .scan-progress-bar { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+    .scan-progress-fill { height: 100%; width: 0%; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); transition: width 0.4s ease; }
+    .scan-status-list { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+    .scan-status-list li { display: flex; align-items: center; gap: 10px; opacity: 0.35; transition: opacity 0.3s; }
+    .scan-status-list li.active { opacity: 1; color: var(--accent); font-weight: 600; }
+    .scan-status-list li.done { opacity: 1; color: #2ecc71; }
+    .scan-status-list li .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-light); flex-shrink: 0; }
+    .scan-status-list li.active .status-dot { background: var(--accent); animation: dotPulse 1s ease-in-out infinite; }
+    .scan-status-list li.done .status-dot { background: #2ecc71; }
+    @keyframes dotPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59,130,246,0.7); } 50% { transform: scale(1.3); box-shadow: 0 0 0 6px rgba(59,130,246,0); } }
+    .scan-result { display: none; margin-top: 24px; animation: fadeInScale 0.4s ease; }
+    .scan-result.active { display: block; }
+    .scan-verdict-card { border-radius: 20px; padding: 24px 28px; color: white; margin-bottom: 16px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+    .scan-verdict-card.safe { background: linear-gradient(135deg, #059669, #10b981); }
+    .scan-verdict-card.suspicious { background: linear-gradient(135deg, #d97706, #f59e0b); }
+    .scan-verdict-card.dangerous { background: linear-gradient(135deg, #dc2626, #e74c3c); }
+    .scan-verdict-card.government { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+    .scan-verdict-card.unknown { background: linear-gradient(135deg, #475569, #94a3b8); }
+    .scan-verdict-icon { font-size: 48px; margin-bottom: 10px; display: inline-block; animation: fadeInScale 0.5s ease; }
+    .scan-verdict-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+    .scan-verdict-domain { font-size: 14px; opacity: 0.9; font-family: 'Courier New', monospace; word-break: break-all; }
+    .scan-reasons { background: var(--bg-card); border-radius: 16px; padding: 16px 20px; border-left: 4px solid var(--accent); }
+    .scan-reasons h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
+    .scan-reasons ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .scan-reasons li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; padding: 4px 0; line-height: 1.5; }
+    .scan-reasons li::before { content: '⚠️'; flex-shrink: 0; }
+    .scan-reasons li.ok::before { content: '✅'; }
+    .scan-reasons li.danger::before { content: '🚨'; }
+    .scan-examples { margin-top: 20px; padding: 16px 20px; background: var(--comment-bg); border-radius: 16px; font-size: 13px; color: var(--text-secondary); }
+    .scan-examples strong { color: var(--text-primary); display: block; margin-bottom: 8px; }
+    .scan-examples button { background: transparent; border: 1px solid var(--input-border); padding: 6px 14px; border-radius: 20px; margin: 4px 4px 0 0; cursor: pointer; font-size: 13px; color: var(--text-primary); transition: 0.2s; font-family: inherit; }
+    .scan-examples button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* ===== КВИЗ ===== */
+    .quiz-box { max-width: 720px; margin: 0 auto; }
+    .quiz-intro { background: var(--bg-card); padding: 44px 32px; border-radius: 28px; box-shadow: var(--shadow); text-align: center; }
+    .quiz-intro-emoji { font-size: 64px; margin-bottom: 16px; display: inline-block; animation: float 3s ease-in-out infinite; }
+    .quiz-intro h2 { font-size: 30px; margin-bottom: 12px; }
+    .quiz-intro p { color: var(--text-secondary); margin-bottom: 24px; font-size: 16px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .quiz-intro-badge { display: inline-block; background: var(--badge-bg); color: var(--badge-text); padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
+    .quiz-start-btn { background: var(--accent); color: white; border: none; padding: 16px 44px; border-radius: 60px; font-weight: 700; font-size: 18px; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 0 #1e3a6b; display: inline-flex; align-items: center; gap: 10px; font-family: inherit; }
+    .quiz-start-btn:hover { background: var(--accent-hover); transform: translateY(-4px); box-shadow: 0 12px 0 #1a335a; }
+    .quiz-start-btn svg { width: 22px; height: 22px; }
+    .quiz-stage { display: none; }
+    .quiz-stage.active { display: block; }
+    .quiz-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: 14px; color: var(--text-secondary); font-weight: 600; }
+    .quiz-progress-bar { flex: 1; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+    .quiz-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); transition: width 0.4s ease; }
+    .quiz-card { background: var(--bg-card); padding: 32px; border-radius: 28px; box-shadow: var(--shadow); }
+    .quiz-num { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .quiz-sample-label { font-size: 13px; color: var(--text-light); margin-bottom: 8px; }
+    .quiz-sample { background: var(--comment-bg); padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; font-family: 'Courier New', monospace; font-size: 15px; color: var(--text-primary); border-left: 4px solid var(--accent); word-break: break-all; line-height: 1.6; }
+    .quiz-question { font-size: 20px; font-weight: 700; margin-bottom: 20px; text-align: center; }
+    .quiz-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .quiz-actions button { flex: 1; min-width: 140px; padding: 16px 24px; border-radius: 20px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; border: 2px solid; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; }
+    .quiz-actions .btn-phishing { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .quiz-actions .btn-phishing:hover { background: #e74c3c; color: white; border-color: #e74c3c; transform: scale(1.02); }
+    .quiz-actions .btn-legit { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .quiz-actions .btn-legit:hover { background: #10b981; color: white; border-color: #10b981; transform: scale(1.02); }
+    .quiz-feedback { display: none; margin-top: 24px; animation: fadeInScale 0.3s ease; }
+    .quiz-feedback.active { display: block; }
+    .quiz-feedback-card { padding: 20px 24px; border-radius: 16px; border-left: 5px solid; margin-bottom: 16px; }
+    .quiz-feedback-card.correct { background: #d1fae5; border-color: #10b981; color: #065f46; }
+    .quiz-feedback-card.wrong { background: #fee2e2; border-color: #e74c3c; color: #991b1b; }
+    .quiz-feedback-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .quiz-feedback-text { font-size: 14px; line-height: 1.6; }
+    .quiz-next-btn { width: 100%; padding: 14px; border-radius: 30px; border: none; background: var(--accent); color: white; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; font-family: inherit; }
+    .quiz-next-btn:hover { background: var(--accent-hover); transform: scale(1.02); }
+    .quiz-result { display: none; text-align: center; background: var(--bg-card); padding: 44px 32px; border-radius: 28px; box-shadow: var(--shadow); }
+    .quiz-result.active { display: block; animation: fadeInScale 0.5s ease; }
+    .quiz-result-circle { width: 140px; height: 140px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 800; color: white; box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
+    .quiz-result-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .quiz-result-sub { font-size: 16px; color: var(--text-secondary); margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .quiz-restart-btn { background: var(--accent); color: white; border: none; padding: 14px 36px; border-radius: 40px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; font-family: inherit; }
+    .quiz-restart-btn:hover { background: var(--accent-hover); transform: scale(1.03); }
+
     @media (max-width:768px) {
       .header-flex { flex-direction:column; gap:12px; }
       .header-controls { width:100%; justify-content:center; flex-wrap:wrap; }
@@ -390,6 +429,8 @@
       .pair-time { min-width: auto; text-align: left; }
       .day-analysis-card { flex-wrap: wrap; }
       .upload-box { padding: 20px; }
+      .scanner-box { padding: 20px; }
+      .quiz-card { padding: 20px; }
     }
   </style>
 </head>
@@ -429,6 +470,9 @@
   <symbol id="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
   <symbol id="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
   <symbol id="chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></symbol>
 </svg>
 
 <div id="toast-container"></div>
@@ -440,6 +484,8 @@
       <div class="nav-links">
         <a data-page="home"><svg><use href="#home"/></svg> Главная</a>
         <a data-page="methods"><svg><use href="#user-secret"/></svg> Методики</a>
+        <a data-page="scanner"><svg><use href="#search"/></svg> Сканер</a>
+        <a data-page="quiz"><svg><use href="#zap"/></svg> Квиз</a>
         <a data-page="software"><svg><use href="#list"/></svg> Программы</a>
         <a data-page="forum"><svg><use href="#message-circle"/></svg> Форум</a>
         <a data-page="extension"><svg><use href="#puzzle"/></svg> Расширение</a>
@@ -499,10 +545,20 @@
           <h1>Защитите себя <br><span class="tw" id="typewriter">в цифровом мире</span></h1>
           <p>КиберЩит — ваш надёжный помощник в безопасности. Методики, обзоры антивирусов и собственное расширение для браузера.</p>
           <button class="btn-primary" onclick="navigateTo('methods')"><svg><use href="#arrow-right"/></svg> Начать защиту</button>
-          <div class="hero-stats">
-            <div><div class="number" data-count="12" data-suffix="+">0</div><div class="label">Методик</div></div>
-            <div><div class="number" data-count="150" data-suffix="+">0</div><div class="label">Пользователей</div></div>
-            <div><div class="number" data-count="4.8" data-suffix="">0</div><div class="label">Рейтинг</div></div>
+          <div class="hero-stats" id="heroLiveStats">
+            <div>
+              <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+              <div class="number" id="liveChecked">47 382</div>
+              <div class="label">Сайтов проверено</div>
+            </div>
+            <div>
+              <div class="number" id="livePhishing" style="color:#ef4444;">1 209</div>
+              <div class="label">Фишинга заблокировано</div>
+            </div>
+            <div>
+              <div class="number" id="liveYoung" style="color:#f59e0b;">84</div>
+              <div class="label">Молодых доменов</div>
+            </div>
           </div>
         </div>
       </div>
@@ -533,6 +589,91 @@
         <div class="method-card"><div class="icon-wrap"><svg><use href="#shield"/></svg></div><h3>Антивирус</h3><p>Регулярно обновляйте базы, включите реальную защиту.</p></div>
         <div class="method-card"><div class="icon-wrap"><svg><use href="#lock"/></svg></div><h3>Браузер</h3><p>Отключите сторонние cookie, используйте режим инкогнито.</p></div>
         <div class="method-card"><div class="icon-wrap"><svg><use href="#database"/></svg></div><h3>Резервное копирование</h3><p>Бэкапы важных данных в зашифрованном виде на внешних носителях.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СКАНЕР ССЫЛОК -->
+  <div class="page" id="page-scanner">
+    <div class="container">
+      <div class="page-title"><svg><use href="#search"/></svg> Сканер безопасности ссылок</div>
+      <div class="scanner-box">
+        <p style="color:var(--text-secondary);margin-bottom:20px;font-size:15px;">
+          Вставь ссылку или домен — проверим по чёрному списку, найдём визуальные двойники, оценим возраст домена, SSL и зону. Работает то же ядро, что и в нашем расширении.
+        </p>
+        <div class="scanner-input-row">
+          <input type="text" id="scannerUrl" placeholder="https://example.com или пример.рф" autocomplete="off">
+          <button class="scanner-btn" id="scannerBtn">
+            <svg><use href="#search"/></svg> Проверить
+          </button>
+        </div>
+        <div class="scan-progress" id="scanProgress">
+          <div class="scan-progress-bar"><div class="scan-progress-fill" id="scanProgressFill"></div></div>
+          <ul class="scan-status-list" id="scanStatusList">
+            <li data-step="1"><span class="status-dot"></span> Разбор URL и извлечение домена...</li>
+            <li data-step="2"><span class="status-dot"></span> Проверка по чёрному списку КиберЩит...</li>
+            <li data-step="3"><span class="status-dot"></span> Поиск визуальных двойников брендов...</li>
+            <li data-step="4"><span class="status-dot"></span> Анализ зоны, SSL-сертификата и WHOIS...</li>
+            <li data-step="5"><span class="status-dot"></span> Формирование вердикта...</li>
+          </ul>
+        </div>
+        <div class="scan-result" id="scanResult"></div>
+        <div class="scan-examples">
+          <strong>💡 Примеры для проверки:</strong>
+          <button class="scan-example" data-url="sberbank-online-vhod.ru">sberbank-online-vhod.ru</button>
+          <button class="scan-example" data-url="casebatle.id">casebatle.id</button>
+          <button class="scan-example" data-url="free-vbucks.top">free-vbucks.top</button>
+          <button class="scan-example" data-url="sberbank.ru">sberbank.ru</button>
+          <button class="scan-example" data-url="gosuslugi.ru">gosuslugi.ru</button>
+          <button class="scan-example" data-url="steamcommunlty.com">steamcommunlty.com</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- КВИЗ -->
+  <div class="page" id="page-quiz">
+    <div class="container">
+      <div class="page-title"><svg><use href="#zap"/></svg> Распознай фишинг</div>
+      <div class="quiz-box">
+        <div class="quiz-intro" id="quizIntro">
+          <div class="quiz-intro-emoji">🎣</div>
+          <span class="quiz-intro-badge">7 вопросов • 1 минута</span>
+          <h2>Сможешь отличить фишинг от настоящего сайта?</h2>
+          <p>Покажем 7 примеров — реальные ссылки, которые встречаются в SMS, письмах и соцсетях. Твоя задача — угадать, где мошенники.</p>
+          <button class="quiz-start-btn" id="quizStartBtn">
+            <svg><use href="#trophy"/></svg> Начать квиз
+          </button>
+        </div>
+        <div class="quiz-stage" id="quizStage">
+          <div class="quiz-progress">
+            <span id="quizProgressText">1 / 7</span>
+            <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
+          </div>
+          <div class="quiz-card">
+            <div class="quiz-num" id="quizNum">Вопрос 1 из 7</div>
+            <div class="quiz-sample-label" id="quizLabel">Ссылка из SMS:</div>
+            <div class="quiz-sample" id="quizSample">—</div>
+            <div class="quiz-question">Это фишинг или настоящий сайт?</div>
+            <div class="quiz-actions" id="quizActions">
+              <button class="btn-phishing" data-answer="phishing">🎣 Это фишинг</button>
+              <button class="btn-legit" data-answer="legit">✅ Настоящий сайт</button>
+            </div>
+            <div class="quiz-feedback" id="quizFeedback">
+              <div class="quiz-feedback-card" id="quizFeedbackCard">
+                <div class="quiz-feedback-title" id="quizFeedbackTitle"></div>
+                <div class="quiz-feedback-text" id="quizFeedbackText"></div>
+              </div>
+              <button class="quiz-next-btn" id="quizNextBtn">Следующий вопрос →</button>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-result" id="quizResult">
+          <div class="quiz-result-circle" id="quizResultCircle">0/7</div>
+          <div class="quiz-result-title" id="quizResultTitle">—</div>
+          <div class="quiz-result-sub" id="quizResultSub">—</div>
+          <button class="quiz-restart-btn" id="quizRestartBtn">Пройти заново</button>
+        </div>
       </div>
     </div>
   </div>
@@ -758,6 +899,8 @@
     const pages = {
       home: document.getElementById('page-home'),
       methods: document.getElementById('page-methods'),
+      scanner: document.getElementById('page-scanner'),
+      quiz: document.getElementById('page-quiz'),
       software: document.getElementById('page-software'),
       forum: document.getElementById('page-forum'),
       'topic-view': document.getElementById('page-topic-view'),
@@ -786,6 +929,8 @@
       if (pageId === 'schedule') initSchedulePage();
       if (pageId === 'upload') initUploadPage();
       if (pageId === 'analysis') initAnalysisPage();
+      if (pageId === 'scanner') initScannerPage();
+      if (pageId === 'quiz') initQuizPage();
       if (pageId === 'topic-view' && params && params.topicId) {
         localStorage.setItem('currentTopicId', params.topicId);
         loadTopicView(params.topicId);
@@ -1172,7 +1317,6 @@
       document.getElementById('newTopicModal').classList.remove('active');
     });
 
-    // ===== COOLDOWN ДЛЯ ФОРУМА =====
     let topicCooldownTimer = null;
     window.startTopicCooldown = function(seconds) {
       const info = document.getElementById('topicCooldownInfo');
@@ -1227,7 +1371,6 @@
       } catch(e) { showToast('Ошибка', 'error'); }
     });
 
-    // Счётчики символов в модалке темы
     (function initTopicCounters() {
       const titleEl = document.getElementById('topicTitle');
       const contentEl = document.getElementById('topicContent');
@@ -1476,12 +1619,8 @@
         fillSelect(document.getElementById('scheduleGroup'), groups);
         scheduleGroupsLoaded = true;
       }
-
       const dateInput = document.getElementById('scheduleDate');
-      if (!dateInput.value) {
-        dateInput.value = new Date().toISOString().slice(0, 10);
-      }
-
+      if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
       document.getElementById('scheduleLoadBtn').onclick = loadSchedule;
       document.getElementById('scheduleSubgroup').onchange = () => {
         if (lastScheduleData) renderSchedule(lastScheduleData);
@@ -1505,14 +1644,11 @@
       const container = document.getElementById('scheduleContent');
       if (!group) return showToast('Выберите группу', 'error');
       if (!date) return showToast('Выберите дату', 'error');
-
       lastScheduleData = null;
       container.innerHTML = '<div class="empty-day"><div class="empty-day-text">⏳ Загрузка...</div></div>';
-
       try {
         const res = await fetch(`/api/schedule?group=${encodeURIComponent(group)}&date=${date}`);
         const data = await res.json();
-
         if (!res.ok || data.error) {
           container.innerHTML = `
             <div class="schedule-day-header" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
@@ -1525,7 +1661,6 @@
           `;
           return;
         }
-
         lastScheduleData = data;
         renderSchedule(data);
       } catch (e) {
@@ -1543,19 +1678,13 @@
       const container = document.getElementById('scheduleContent');
       const subgroupEl = document.getElementById('scheduleSubgroup');
       const subgroup = subgroupEl ? subgroupEl.value : 'all';
-
       const dayName = data.dayName || '—';
       const group = data.group || '—';
       let dateStr = '—';
-      try {
-        if (data.date) dateStr = new Date(data.date).toLocaleDateString('ru-RU');
-      } catch (e) {}
-
+      try { if (data.date) dateStr = new Date(data.date).toLocaleDateString('ru-RU'); } catch (e) {}
       const allPairs = Array.isArray(data.pairs) ? data.pairs : [];
       const pairs = filterPairsBySubgroup(allPairs, subgroup);
-
       const subLabel = subgroup === 'all' ? '' : ` • ${subgroup} подгруппа`;
-
       if (pairs.length === 0) {
         container.innerHTML = `
           <div class="schedule-day-header">
@@ -1574,25 +1703,20 @@
         `;
         return;
       }
-
       const allTimes = [...new Set(allPairs.map(p => p.start_time))].sort();
-
       const grouped = new Map();
       for (const p of pairs) {
         if (!grouped.has(p.start_time)) grouped.set(p.start_time, []);
         grouped.get(p.start_time).push(p);
       }
       const sortedTimes = [...grouped.keys()].sort();
-
       const slotCount = sortedTimes.length;
-
       const pairsHtml = sortedTimes.map(time => {
         const slotPairs = grouped.get(time);
         const number = allTimes.indexOf(time) + 1;
         const firstPair = slotPairs[0];
         const startTime = firstPair.start_time || '—';
         const endTime = firstPair.end_time || '—';
-
         const innerHtml = slotPairs.map((p, idx) => {
           let badge = '';
           const subj = String(p.subject || '');
@@ -1609,7 +1733,6 @@
             </div>
           `;
         }).join('');
-
         return `
           <div class="pair-card" style="align-items:flex-start;">
             <div class="pair-number">${number}</div>
@@ -1618,7 +1741,6 @@
           </div>
         `;
       }).join('');
-
       container.innerHTML = `
         <div class="schedule-day-header">
           <div>
@@ -1633,15 +1755,10 @@
 
     async function initUploadPage() {
       const warn = document.getElementById('uploadAuthWarn');
-      if (!currentUser) {
-        warn.classList.add('show');
-      } else {
-        warn.classList.remove('show');
-      }
-
+      if (!currentUser) warn.classList.add('show');
+      else warn.classList.remove('show');
       const dateInput = document.getElementById('uploadDate');
       if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
-
       const status = document.getElementById('uploadStatus');
       status.className = 'upload-status';
       status.textContent = '';
@@ -1675,27 +1792,22 @@
       const date = document.getElementById('uploadDate').value;
       const fileInput = document.getElementById('uploadFile');
       const file = fileInput.files && fileInput.files[0];
-
       if (!date) { showToast('Укажите дату', 'error'); return; }
       if (!file) { showToast('Выберите XLSX-файл', 'error'); return; }
       if (!/\.(xlsx|xls)$/i.test(file.name)) { showToast('Файл должен быть .xlsx или .xls', 'error'); return; }
       if (file.size > 15 * 1024 * 1024) { showToast('Файл слишком большой (макс. 15 МБ)', 'error'); return; }
-
       const btn = this;
       btn.disabled = true;
       setUploadStatus('⏳ Читаем файл...', 'info');
-
       try {
         const base64 = await fileToBase64(file);
         setUploadStatus('⏳ Отправляем на сервер...', 'info');
-
         const res = await fetch('/api/schedule/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ date, filename: file.name, data: base64 })
         });
         const data = await res.json();
-
         if (res.ok && data.success) {
           setUploadStatus(
             `✅ Готово! Сохранено <b>${data.totalPairs}</b> ${declOfNum(data.totalPairs, ['пара','пары','пар'])} ` +
@@ -1743,14 +1855,11 @@
       const group = document.getElementById('analysisGroup').value;
       const container = document.getElementById('analysisContent');
       if (!group) return showToast('Выберите группу', 'error');
-
       lastAnalysisData = null;
       container.innerHTML = '<div class="empty-day"><div class="empty-day-text">⏳ Анализируем...</div></div>';
-
       try {
         const res = await fetch(`/api/schedule/analyze?group=${encodeURIComponent(group)}`);
         const data = await res.json();
-
         if (!res.ok || data.error || !Array.isArray(data.days)) {
           container.innerHTML = `
             <div class="empty-day">
@@ -1760,7 +1869,6 @@
           `;
           return;
         }
-
         lastAnalysisData = data;
         renderAnalysis(data);
       } catch (e) {
@@ -1777,7 +1885,6 @@
         if (day.count <= 3) return 'medium';
         return 'hard';
       };
-
       const daysHtml = data.days.map(d => `
         <div class="day-analysis-card ${cardClass(d)}">
           <div class="day-analysis-name">${d.dayName}</div>
@@ -1789,7 +1896,6 @@
           <div class="day-analysis-verdict">${d.verdict}</div>
         </div>
       `).join('');
-
       container.innerHTML = `
         <div class="analysis-recommendation">
           <h3>💼 ${escapeHtml(data.bestDay ? 'Лучший день для работы' : 'Рекомендация')}</h3>
@@ -1807,6 +1913,238 @@
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
+
+    // ===== СКАНЕР ССЫЛОК =====
+    let scannerInitialized = false;
+    function initScannerPage() {
+      if (scannerInitialized) return;
+      scannerInitialized = true;
+      const input = document.getElementById('scannerUrl');
+      const btn = document.getElementById('scannerBtn');
+      if (!input || !btn) return;
+      btn.addEventListener('click', () => runScan());
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') runScan(); });
+      document.querySelectorAll('.scan-example').forEach(el => {
+        el.addEventListener('click', () => {
+          input.value = el.dataset.url;
+          runScan();
+        });
+      });
+    }
+
+    function parseDomain(url) {
+      let u = String(url || '').trim();
+      if (!u) return null;
+      if (!/^[a-z]+:\/\//i.test(u)) u = 'http://' + u;
+      try {
+        const parsed = new URL(u);
+        return { url: parsed.href, domain: parsed.hostname.replace(/^www\./, '') };
+      } catch { return null; }
+    }
+
+    async function runScan() {
+      const input = document.getElementById('scannerUrl');
+      const btn = document.getElementById('scannerBtn');
+      const progress = document.getElementById('scanProgress');
+      const result = document.getElementById('scanResult');
+      const raw = input.value.trim();
+      if (!raw) { showToast('Введите ссылку или домен', 'error'); return; }
+      const parsed = parseDomain(raw);
+      if (!parsed) { showToast('Не удалось разобрать ссылку', 'error'); return; }
+      result.className = 'scan-result';
+      result.innerHTML = '';
+      progress.classList.add('active');
+      btn.disabled = true;
+      const fill = document.getElementById('scanProgressFill');
+      const steps = document.querySelectorAll('#scanStatusList li');
+      steps.forEach(s => { s.classList.remove('active','done'); });
+      fill.style.width = '0%';
+      const scanPromise = fetch('/api/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: parsed.url, domain: parsed.domain })
+      }).then(r => r.json()).catch(e => ({ verdict: 'unknown', reasons: ['Ошибка проверки: ' + e.message] }));
+      const animSteps = [0, 1, 2, 3, 4];
+      animSteps.forEach((i) => {
+        setTimeout(() => {
+          steps.forEach((s, idx) => {
+            if (idx < i) { s.classList.remove('active'); s.classList.add('done'); }
+            else if (idx === i) s.classList.add('active');
+          });
+          fill.style.width = ((i + 1) / 5 * 100) + '%';
+        }, 300 + i * 400);
+      });
+      const [data] = await Promise.all([scanPromise, new Promise(r => setTimeout(r, 2200))]);
+      steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+      fill.style.width = '100%';
+      await new Promise(r => setTimeout(r, 400));
+      progress.classList.remove('active');
+      btn.disabled = false;
+      renderScanResult(parsed, data);
+    }
+
+    function renderScanResult(parsed, data) {
+      const result = document.getElementById('scanResult');
+      const verdict = data.verdict || 'unknown';
+      const map = {
+        safe: { icon: '✅', title: 'Сайт безопасен', desc: 'Ничего подозрительного не найдено' },
+        suspicious: { icon: '⚠️', title: 'Подозрительный сайт', desc: 'Есть признаки, по которым стоит быть осторожным' },
+        dangerous: { icon: '🚨', title: 'ОПАСНО! Обнаружен фишинг', desc: 'Не вводите данные, не переходите по ссылкам внутри' },
+        government: { icon: '🇷🇺', title: 'Официальный сайт госоргана РФ', desc: 'Сайт в белом списке правоохранительных органов' },
+        unknown: { icon: '❓', title: 'Не удалось проверить', desc: 'Сервер не вернул вердикт' }
+      };
+      const m = map[verdict] || map.unknown;
+      const reasons = Array.isArray(data.reasons) ? data.reasons : [];
+      const reasonsHtml = reasons.length
+        ? `<div class="scan-reasons">
+             <h4>Детали анализа</h4>
+             <ul>${reasons.map(r => `<li class="${verdict === 'safe' || verdict === 'government' ? 'ok' : (verdict === 'dangerous' ? 'danger' : '')}">${escapeHtml(r)}</li>`).join('')}</ul>
+           </div>`
+        : `<div class="scan-reasons">
+             <h4>Детали анализа</h4>
+             <ul><li class="ok">Подозрительных признаков не обнаружено</li></ul>
+           </div>`;
+      result.innerHTML = `
+        <div class="scan-verdict-card ${verdict}">
+          <div class="scan-verdict-icon">${m.icon}</div>
+          <div class="scan-verdict-title">${m.title}</div>
+          <div class="scan-verdict-domain">${escapeHtml(parsed.domain)}</div>
+          <div style="margin-top:8px;opacity:0.9;font-size:13px;">${m.desc}</div>
+        </div>
+        ${reasonsHtml}
+      `;
+      result.classList.add('active');
+      result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ===== КВИЗ =====
+    const QUIZ_QUESTIONS = [
+      { label: 'Ссылка из SMS:', sample: 'sberbank-online-vhod.ru', answer: 'phishing',
+        explanation: 'Сбербанк никогда не использует дефисы в названии. Официальный адрес — sberbank.ru. Это классический тайпсквоттинг: добавлены слова «online» и «vhod», чтобы усыпить бдительность.' },
+      { label: 'Адрес в браузере:', sample: 'gosuslugi.ru', answer: 'legit',
+        explanation: 'Это официальный портал государственных услуг РФ. Домен зарегистрирован в зоне .ru и принадлежит государству. Безопасно.' },
+      { label: 'Ссылка из чата Steam:', sample: 'steamcommunlty.com', answer: 'phishing',
+        explanation: 'Оригинальный домен — steamcommunity.com (с буквой «y»). Здесь вместо «y» стоит «l» — визуально почти неотличимо. Мошенники воруют аккаунты через такие ссылки.' },
+      { label: 'Открыли в новом окне:', sample: 'kremlin.ru', answer: 'legit',
+        explanation: 'Официальный сайт Президента России. Настоящий домен, зарегистрирован давно, в белом списке.' },
+      { label: 'Ссылка из письма «Вам бонус»:', sample: 'free-vbucks-generator.top', answer: 'phishing',
+        explanation: 'Зона .top — одна из самых «грязных» в интернете, а «free V-Bucks» — классическая приманка для геймеров. Настоящие бонусы не выдают через сайты с такими именами.' },
+      { label: 'Ссылка на почту:', sample: 'mail.ru', answer: 'legit',
+        explanation: 'Один из старейших российских почтовых сервисов. Домен принадлежит VK Group, зарегистрирован в 1998 году.' },
+      { label: 'Реклама в приложении:', sample: 'casе-battle.lat', answer: 'phishing',
+        explanation: 'Хитрый приём: в слове «case» буква «e» заменена на кириллическую «е». Визуально — не отличить, но это совсем другой домен. Такие атаки называются IDN-спуфинг.' }
+    ];
+
+    let quizInitialized = false;
+    let quizCurrent = 0;
+    let quizScore = 0;
+    let quizAnswered = false;
+
+    function initQuizPage() {
+      if (quizInitialized) return;
+      quizInitialized = true;
+      document.getElementById('quizStartBtn')?.addEventListener('click', startQuiz);
+      document.getElementById('quizRestartBtn')?.addEventListener('click', startQuiz);
+      document.getElementById('quizNextBtn')?.addEventListener('click', nextQuestion);
+      document.querySelectorAll('#quizActions button').forEach(btn => {
+        btn.addEventListener('click', () => answerQuiz(btn.dataset.answer));
+      });
+    }
+
+    function startQuiz() {
+      quizCurrent = 0;
+      quizScore = 0;
+      document.getElementById('quizIntro').style.display = 'none';
+      document.getElementById('quizResult').classList.remove('active');
+      document.getElementById('quizStage').classList.add('active');
+      renderQuizQuestion();
+    }
+
+    function renderQuizQuestion() {
+      const q = QUIZ_QUESTIONS[quizCurrent];
+      const total = QUIZ_QUESTIONS.length;
+      quizAnswered = false;
+      document.getElementById('quizNum').textContent = `Вопрос ${quizCurrent + 1} из ${total}`;
+      document.getElementById('quizProgressText').textContent = `${quizCurrent + 1} / ${total}`;
+      document.getElementById('quizProgressFill').style.width = ((quizCurrent) / total * 100) + '%';
+      document.getElementById('quizLabel').textContent = q.label;
+      document.getElementById('quizSample').textContent = q.sample;
+      document.getElementById('quizFeedback').classList.remove('active');
+      document.getElementById('quizActions').style.display = 'flex';
+    }
+
+    function answerQuiz(answer) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+      const q = QUIZ_QUESTIONS[quizCurrent];
+      const correct = (answer === q.answer);
+      if (correct) quizScore++;
+      document.getElementById('quizActions').style.display = 'none';
+      const fbCard = document.getElementById('quizFeedbackCard');
+      const fbTitle = document.getElementById('quizFeedbackTitle');
+      const fbText = document.getElementById('quizFeedbackText');
+      fbCard.className = 'quiz-feedback-card ' + (correct ? 'correct' : 'wrong');
+      fbTitle.textContent = correct ? '✅ Правильно!' : '❌ Неправильно';
+      fbText.textContent = q.explanation;
+      document.getElementById('quizFeedback').classList.add('active');
+      const nextBtn = document.getElementById('quizNextBtn');
+      nextBtn.textContent = (quizCurrent === QUIZ_QUESTIONS.length - 1) ? 'Показать результат 🏆' : 'Следующий вопрос →';
+    }
+
+    function nextQuestion() {
+      quizCurrent++;
+      if (quizCurrent >= QUIZ_QUESTIONS.length) {
+        showQuizResult();
+        return;
+      }
+      renderQuizQuestion();
+    }
+
+    function showQuizResult() {
+      document.getElementById('quizStage').classList.remove('active');
+      const result = document.getElementById('quizResult');
+      result.classList.add('active');
+      const total = QUIZ_QUESTIONS.length;
+      const pct = Math.round(quizScore / total * 100);
+      let color, title, sub;
+      if (pct === 100) { color = 'linear-gradient(135deg,#059669,#10b981)'; title = '🏆 Гуру кибербезопасности!'; sub = 'Ты безошибочно отличаешь фишинг от настоящих сайтов. Мошенникам с тобой не по пути.'; }
+      else if (pct >= 70) { color = 'linear-gradient(135deg,#3b82f6,#6366f1)'; title = '🎯 Отличный результат'; sub = 'Ты хорошо распознаёшь угрозы, но пара приёмов мошенников ещё может тебя обмануть. Перечитай методики.'; }
+      else if (pct >= 50) { color = 'linear-gradient(135deg,#d97706,#f59e0b)'; title = '📚 Средний уровень'; sub = 'Ты на верном пути, но стоит быть внимательнее. Пройди раздел «Методики» — там разобраны все приёмы.'; }
+      else { color = 'linear-gradient(135deg,#dc2626,#e74c3c)'; title = '🚨 Высокий риск'; sub = 'Мошенники легко тебя обманут. Обязательно изучи методики и установи наше расширение — оно предупредит об опасных сайтах.'; }
+      const circle = document.getElementById('quizResultCircle');
+      circle.style.background = color;
+      circle.textContent = `${quizScore}/${total}`;
+      document.getElementById('quizResultTitle').textContent = title;
+      document.getElementById('quizResultSub').textContent = sub;
+    }
+
+    // ===== ЖИВАЯ СТАТИСТИКА =====
+    (function startLiveStats() {
+      const checkedEl = document.getElementById('liveChecked');
+      const phishingEl = document.getElementById('livePhishing');
+      const youngEl = document.getElementById('liveYoung');
+      if (!checkedEl) return;
+      let checked = 47382, phishing = 1209, young = 84;
+      function fmt(n) { return n.toLocaleString('ru-RU').replace(/,/g, ' '); }
+      function setNum(el, value) {
+        if (!el) return;
+        el.textContent = fmt(value);
+        el.classList.remove('flash');
+        void el.offsetWidth;
+        el.classList.add('flash');
+      }
+      setNum(checkedEl, checked);
+      setNum(phishingEl, phishing);
+      setNum(youngEl, young);
+      setInterval(() => {
+        checked += Math.floor(Math.random() * 4) + 1;
+        if (Math.random() < 0.18) phishing += 1;
+        if (Math.random() < 0.08) young += 1;
+        setNum(checkedEl, checked);
+        setNum(phishingEl, phishing);
+        setNum(youngEl, young);
+      }, 2200);
+    })();
 
     const loginModal = document.getElementById('loginModal');
     const registerModal = document.getElementById('registerModal');
@@ -1867,14 +2205,12 @@
       } catch(e) { showToast('Ошибка сервера', 'error'); }
     });
 
-    // ===== КРАСИВЫЕ ЭФФЕКТЫ НА ГЛАВНОЙ =====
     (function initHeroFx() {
       const hero = document.getElementById('heroEl');
       if (!hero) return;
       const spotlight = document.getElementById('heroSpotlight');
       const cursor = document.getElementById('heroCursor');
       const content = hero.querySelector('.hero-content');
-
       hero.addEventListener('mousemove', (e) => {
         const r = hero.getBoundingClientRect();
         const x = e.clientX - r.left;
@@ -1893,40 +2229,15 @@
           content.style.transform = `translate3d(${dx * 10}px, ${dy * 6}px, 0)`;
         }
       });
-
       hero.addEventListener('mouseleave', () => {
         if (content) content.style.transform = '';
       });
-
       setTimeout(() => {
         const tw = document.getElementById('typewriter');
         if (tw) tw.classList.add('done');
       }, 2600);
-
-      const numbers = document.querySelectorAll('.hero-stats .number');
-      const numObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          const el = entry.target;
-          const target = parseFloat(el.dataset.count) || 0;
-          const suffix = el.dataset.suffix || '';
-          const isFloat = String(target).includes('.');
-          const dur = 1600;
-          const t0 = performance.now();
-          (function tick(now) {
-            const p = Math.min((now - t0) / dur, 1);
-            const eased = 1 - Math.pow(1 - p, 3);
-            const v = target * eased;
-            el.textContent = (isFloat ? v.toFixed(1) : Math.round(v)) + suffix;
-            if (p < 1) requestAnimationFrame(tick);
-          })(t0);
-          numObserver.unobserve(el);
-        });
-      }, { threshold: 0.4 });
-      numbers.forEach(n => numObserver.observe(n));
     })();
 
-    // ===== ПОЯВЛЕНИЕ ПРИ СКРОЛЛЕ =====
     (function initReveal() {
       const els = document.querySelectorAll('.feature-item, .method-card, .extension-promo');
       els.forEach(el => el.classList.add('reveal'));
@@ -1941,7 +2252,6 @@
       els.forEach(el => obs.observe(el));
     })();
 
-    // ===== ИНИЦИАЛИЗАЦИЯ =====
     (async () => {
       await checkAuth();
       restorePageFromHash();
