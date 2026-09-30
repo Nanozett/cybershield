@@ -207,6 +207,10 @@
     .attack-map-canvas .leaflet-tile-pane {
       filter: brightness(1.15) saturate(1.8) contrast(1.08) hue-rotate(-8deg);
     }
+    /* Инвертируем светлые тайлы OSM, чтобы получить тёмную карту */
+.attack-map-canvas .leaflet-tile-pane {
+  filter: invert(1) grayscale(1) brightness(0.85) contrast(1.2);
+}
     .attack-map-canvas .leaflet-control-attribution,
     .attack-map-canvas .leaflet-control-zoom { display: none !important; }
 
@@ -2444,40 +2448,41 @@
       }, 900);
     })();
 
-    // ===== КАРТА АТАК (Leaflet + CartoDB Dark Matter + анимированные дуги) =====
-    (function initAttackMap() {
-      const mapEl = document.getElementById('attackMapCanvas');
-      const feedList = document.getElementById('attackFeedList');
-      if (!mapEl || !feedList) return;
+// ===== КАРТА АТАК (Leaflet + OSM + CSS-фильтр для тёмной темы) =====
+(function initAttackMap() {
+  const mapEl = document.getElementById('attackMapCanvas');
+  const feedList = document.getElementById('attackFeedList');
+  if (!mapEl || !feedList) return;
 
-      if (typeof L === 'undefined') {
-        console.warn('Leaflet не загрузился — карта не будет показана');
-        return;
-      }
+  if (typeof L === 'undefined') {
+    console.warn('Leaflet не загрузился — карта не будет показана');
+    return;
+  }
 
-      const map = L.map(mapEl, {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        tap: false,
-        touchZoom: false,
-        minZoom: 0,
-        maxZoom: 5
-      });
+  const map = L.map(mapEl, {
+    zoomControl: false,
+    attributionControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    tap: false,
+    touchZoom: false,
+    minZoom: 0,
+    maxZoom: 5
+  });
 
-      // CartoDB Dark Matter — насыщенная тёмно-синяя подложка
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        noWrap: true,
-        crossOrigin: true,
-        subdomains: 'abcd'
-      }).addTo(map);
+  // OpenStreetMap — бесплатно, без ключа, без CORS-блокировок
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    noWrap: true,
+    crossOrigin: true
+  }).addTo(map);
 
-      map.fitBounds([[-55, -175], [72, 175]], { padding: [10, 10] });
+  map.fitBounds([[-55, -175], [72, 175]], { padding: [10, 10] });
+
+
 
       const CITIES = [
         { name: 'Москва',          lat: 55.7558, lon: 37.6173 },
