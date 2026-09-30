@@ -157,7 +157,7 @@
     .feature-item h3 { font-size:20px; margin-bottom:10px; }
     .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
 
-    /* ============ КАРТА КИБЕРАТАК (LEAFLET) ============ */
+    /* ============ КАРТА КИБЕРАТАК (LEAFLET + ESRI DARK GRAY) ============ */
     .attack-map-section { margin: 40px 0 30px; background: linear-gradient(135deg, #0a1424, #0b1a2e); border-radius: 30px; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); color: white; animation: fadeInScale 1s ease; }
     .attack-map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .attack-map-header h2 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
@@ -167,36 +167,56 @@
       position: relative;
       border-radius: 20px;
       overflow: hidden;
-      background: #060d17;
-      min-height: 380px;
+      background: #0a0f1a;
+      min-height: 420px;
+      box-shadow: inset 0 0 80px rgba(59,130,246,0.10);
     }
-    /* Оформление Leaflet: убираем светлые части, оставляем тёмную тему */
+    /* Красивая виньетка + синеватый оттенок поверх карты */
+    .attack-map-canvas::after {
+      content: '';
+      position: absolute; inset: 0;
+      pointer-events: none;
+      border-radius: 20px;
+      z-index: 500;
+      background:
+        radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(6,13,23,0.55) 100%),
+        linear-gradient(180deg, rgba(59,130,246,0.06) 0%, transparent 25%),
+        linear-gradient(0deg, rgba(139,92,246,0.05) 0%, transparent 25%);
+    }
     .attack-map-canvas .leaflet-container {
-      background: #060d17 !important;
+      background: #0a0f1a !important;
       font-family: inherit;
       height: 100%;
       width: 100%;
     }
+    /* Тайлы Esri Dark Gray — уже тёмные, только чуть насыщаем */
     .attack-map-canvas .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1) saturate(0.6);
-}
+      filter: brightness(1.02) saturate(1.15) contrast(1.02);
+    }
     .attack-map-canvas .leaflet-control-attribution { display: none !important; }
     .attack-map-canvas .leaflet-control-zoom { display: none !important; }
-    /* Стили для кастомных подписей-маркеров */
+
+    /* Кастомные подписи городов — на тёмной плашке со свечением */
     .leaflet-attack-marker { background: transparent !important; border: none !important; }
     .leaflet-attack-label {
-      color: #ef4444;
+      color: #ff7a7a;
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
       white-space: nowrap;
-      text-shadow: 0 0 8px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.9);
       pointer-events: none;
       display: inline-block;
       transform: translate(-50%, 0);
+      padding: 3px 8px;
+      background: rgba(10,15,26,0.85);
+      border: 1px solid rgba(239,68,68,0.45);
+      border-radius: 4px;
+      box-shadow: 0 0 12px rgba(239,68,68,0.35), inset 0 0 8px rgba(239,68,68,0.08);
+      backdrop-filter: blur(4px);
     }
-    .attack-feed { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; max-height: 380px; }
+
+    .attack-feed { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; max-height: 420px; }
     .attack-feed h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 14px; }
     .attack-feed-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
     .attack-feed-item { background: rgba(239,68,68,0.08); border-left: 3px solid #ef4444; padding: 8px 10px; border-radius: 6px; font-size: 12px; animation: attackFeedIn 0.5s ease; line-height: 1.4; }
@@ -2400,7 +2420,7 @@
       }, 900);
     })();
 
-    // ===== КАРТА АТАК (Leaflet + CartoDB Dark Matter) =====
+    // ===== КАРТА АТАК (Leaflet + Esri Dark Gray Canvas) =====
     (function initAttackMap() {
       const mapEl = document.getElementById('attackMapCanvas');
       const feedList = document.getElementById('attackFeedList');
@@ -2426,15 +2446,23 @@
         maxZoom: 5
       });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        subdomains: 'abc',
-        maxZoom: 19,
+      // Esri Dark Gray Canvas — базовая тёмная карта (без ключа)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        noWrap: true,
+        crossOrigin: true,
+        attribution: ''
+      }).addTo(map);
+
+      // Esri Dark Gray Reference — названия стран/океанов поверх (тоже без ключа)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
         noWrap: true,
         crossOrigin: true
       }).addTo(map);
-      
-      // Показываем весь мир
-      map.fitBounds([[-60, -180], [75, 180]], { padding: [0, 0] });
+
+      // Показываем мир с небольшим отступом — континенты дышат
+      map.fitBounds([[-55, -175], [72, 175]], { padding: [10, 10] });
 
       // Реальные координаты городов (lat, lon)
       const CITIES = [
@@ -2469,34 +2497,56 @@
         const city = pick(CITIES);
         const domain = pick(DOMAINS);
 
+        // Внешнее свечение (halo)
+        const glow = L.circleMarker([city.lat, city.lon], {
+          radius: 18,
+          color: 'transparent',
+          fillColor: '#ef4444',
+          fillOpacity: 0.18,
+          weight: 0,
+          interactive: false
+        }).addTo(map);
+
         // Красная точка
         const marker = L.circleMarker([city.lat, city.lon], {
-          radius: 5,
-          color: '#ef4444',
-          fillColor: '#ef4444',
+          radius: 6,
+          color: '#ff5555',
+          fillColor: '#ff3b3b',
           fillOpacity: 1,
           weight: 2,
           interactive: false
         }).addTo(map);
 
-        // Пульсирующее кольцо
-        const pulse = L.circleMarker([city.lat, city.lon], {
+        // Два пульсирующих кольца с задержкой — красиво как радар
+        const pulse1 = L.circleMarker([city.lat, city.lon], {
+          radius: 6,
+          color: '#ef4444',
+          fillColor: 'transparent',
+          weight: 2.5,
+          opacity: 1,
+          interactive: false
+        }).addTo(map);
+
+        const pulse2 = L.circleMarker([city.lat, city.lon], {
           radius: 6,
           color: '#ef4444',
           fillColor: 'transparent',
           weight: 2,
-          opacity: 1,
+          opacity: 0,
           interactive: false
         }).addTo(map);
 
         let r = 6;
         const interval = setInterval(() => {
           r += 1.5;
-          pulse.setRadius(r);
-          pulse.setStyle({ opacity: Math.max(0, 1 - (r - 6) / 30) });
-          if (r > 36) {
+          pulse1.setRadius(r);
+          pulse1.setStyle({ opacity: Math.max(0, 1 - (r - 6) / 28) });
+          pulse2.setRadius(Math.max(6, r - 8));
+          pulse2.setStyle({ opacity: r > 14 ? Math.max(0, 1 - (r - 14) / 28) : 0 });
+          if (r > 40) {
             clearInterval(interval);
-            map.removeLayer(pulse);
+            map.removeLayer(pulse1);
+            map.removeLayer(pulse2);
           }
         }, 50);
 
@@ -2515,7 +2565,8 @@
         setTimeout(() => {
           map.removeLayer(marker);
           map.removeLayer(label);
-        }, 3000);
+          map.removeLayer(glow);
+        }, 3200);
 
         // Лента событий
         const item = document.createElement('div');
