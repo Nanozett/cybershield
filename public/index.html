@@ -30,9 +30,12 @@
     body { background:var(--bg-page); color:var(--text-primary); line-height:1.6; min-height:100vh; }
     .container { max-width:1300px; margin:0 auto; padding:0 24px; }
     svg { display:inline-block; vertical-align:middle; fill:currentColor; width:1.2em; height:1.2em; }
+
+    /* ===== БАЗОВЫЕ АНИМАЦИИ ===== */
     @keyframes fadeInScale { 0% { opacity:0; transform:scale(0.95) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
     @keyframes float { 0% { transform:translateY(0px); } 50% { transform:translateY(-10px); } 100% { transform:translateY(0px); } }
     @keyframes gradientMove { 0% { background-position:0% 50%; } 50% { background-position:100% 50%; } 100% { background-position:0% 50%; } }
+
     .page { display: none; padding:40px 0 50px; animation: fadeInScale 0.5s ease forwards; }
     .page.active { display:block; }
     .stagger-children > * { opacity:0; animation: fadeInScale 0.5s ease forwards; }
@@ -42,6 +45,7 @@
     .stagger-children > *:nth-child(4) { animation-delay:0.20s; }
     .stagger-children > *:nth-child(5) { animation-delay:0.25s; }
     .stagger-children > *:nth-child(6) { animation-delay:0.30s; }
+
     #toast-container { position:fixed; top:80px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; }
     .toast { background:var(--toast-bg); color:var(--toast-text); padding:14px 24px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.2); min-width:250px; max-width:400px; animation:slideIn 0.3s ease; display:flex; align-items:center; gap:12px; border-left:4px solid var(--accent); }
     .toast.error { border-left-color:#e74c3c; }
@@ -49,6 +53,8 @@
     .toast svg { width:24px; height:24px; flex-shrink:0; }
     .toast .toast-close { background:none; border:none; color:var(--text-light); cursor:pointer; margin-left:auto; font-size:20px; }
     @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+
+    /* ===== ХЕДЕР ===== */
     header { background:var(--header-bg); color:var(--header-text); padding:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15); position:sticky; top:0; z-index:100; transition:background 0.3s; }
     .header-flex { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .logo { font-size:26px; font-weight:700; letter-spacing:0.5px; display:flex; align-items:center; gap:8px; }
@@ -66,10 +72,12 @@
     .auth-buttons .register-btn { background:var(--accent); border-color:var(--accent); }
     .auth-buttons .register-btn:hover { background:var(--accent-hover); }
     .auth-buttons button svg { width:16px; height:16px; }
+
+    /* ===== HERO ===== */
     .hero { background: linear-gradient(135deg, var(--hero-bg-start), var(--hero-bg-end)); background-size: 200% 200%; animation: gradientMove 6s ease infinite; color: white; padding: 80px 40px; border-radius: 40px; margin-bottom: 60px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
     .hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%); border-radius: 50%; pointer-events: none; animation: float 8s ease-in-out infinite; }
     .hero::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%); border-radius: 50%; pointer-events: none; animation: float 10s ease-in-out infinite reverse; }
-    .hero-content { position:relative; z-index:2; max-width:800px; margin:0 auto; }
+    .hero-content { position:relative; z-index:3; max-width:800px; margin:0 auto; }
     .hero h1 { font-size:52px; font-weight:800; line-height:1.2; margin-bottom:20px; animation: fadeInScale 0.8s ease; }
     .hero h1 span { color:var(--accent); }
     .hero p { font-size:20px; opacity:0.9; margin-bottom:30px; max-width:600px; margin-left:auto; margin-right:auto; animation: fadeInScale 0.9s ease; }
@@ -80,6 +88,90 @@
     .hero-stats div { text-align:center; }
     .hero-stats .number { font-size:36px; font-weight:700; color:var(--accent); line-height:1; }
     .hero-stats .label { font-size:14px; opacity:0.7; margin-top:4px; }
+
+    /* ===== ВАУ-ЭФФЕКТЫ НА ГЛАВНОЙ ===== */
+    @keyframes blobFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(40px, -30px) scale(1.1); }
+      66% { transform: translate(-30px, 40px) scale(0.95); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 8px 0 #1e3a6b, 0 0 20px rgba(59,130,246,0.4); }
+      50% { box-shadow: 0 8px 0 #1e3a6b, 0 0 40px rgba(59,130,246,0.85); }
+    }
+    @keyframes typewriter { from { width: 0; } to { width: 100%; } }
+    @keyframes blink { 50% { border-color: transparent; } }
+    @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-6px) rotate(6deg); }
+    }
+
+    .hero-blobs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; border-radius: 40px; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; will-change: transform; }
+    .blob-1 { width: 400px; height: 400px; background: radial-gradient(circle, #3b82f6, transparent 70%); top: -120px; right: -120px; animation: blobFloat 12s ease-in-out infinite; }
+    .blob-2 { width: 360px; height: 360px; background: radial-gradient(circle, #8b5cf6, transparent 70%); bottom: -100px; left: -100px; animation: blobFloat 15s ease-in-out infinite reverse; }
+    .blob-3 { width: 320px; height: 320px; background: radial-gradient(circle, #06b6d4, transparent 70%); top: 35%; left: 40%; animation: blobFloat 10s ease-in-out infinite; }
+
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.10) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 1;
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
+      mask-image: radial-gradient(circle at 50% 50%, black, transparent 75%);
+      animation: gridMove 20s linear infinite;
+      border-radius: 40px;
+    }
+
+    .hero-spotlight {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 2;
+      background: radial-gradient(circle 280px at var(--mx, 50%) var(--my, 50%),
+        rgba(59,130,246,0.22), transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+      border-radius: 40px;
+    }
+    .hero:hover .hero-spotlight { opacity: 1; }
+
+    .hero-cursor {
+      position: absolute; width: 24px; height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(59,130,246,0.5), transparent 70%);
+      pointer-events: none; z-index: 5;
+      mix-blend-mode: screen;
+      transform: translate(-50%, -50%);
+      opacity: 0; transition: opacity 0.25s;
+      will-change: left, top;
+    }
+    .hero:hover .hero-cursor { opacity: 1; }
+
+    .hero .hero-content { transition: transform 0.15s ease-out; will-change: transform; }
+    .hero .btn-primary { animation: float 3s ease-in-out infinite, pulseGlow 2.5s ease-in-out infinite !important; }
+
+    .hero h1 .tw {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 3px solid var(--accent);
+      max-width: 0;
+      vertical-align: bottom;
+      animation: typewriter 2s steps(20) 0.4s forwards, blink 0.75s step-end infinite;
+    }
+    .hero h1 .tw.done { border-right: none; }
+
+    .reveal { opacity: 0; transform: translateY(36px); transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .feature-item { transition: transform 0.35s ease, box-shadow 0.35s ease; transform-style: preserve-3d; }
+    .feature-item:hover { transform: translateY(-10px) scale(1.02) rotateX(4deg) rotateY(-4deg); box-shadow: var(--shadow-hover); }
+    .feature-item:hover .icon-wrap { animation: iconFloat 1.6s ease-in-out infinite; }
+    .method-card:hover, .software-card:hover { box-shadow: var(--shadow-hover), 0 0 0 1px rgba(59,130,246,0.4); }
+    .hero-stats .number { display: inline-block; transition: transform 0.3s; }
+
+    /* ===== ПРОЧЕЕ ===== */
     .extension-promo { background: linear-gradient(135deg, #1a2e44, #0b1a2e); border-radius: 30px; padding: 40px 40px; margin: 40px 0 30px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; box-shadow: 0 12px 40px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; animation: fadeInScale 1s ease; }
     .extension-promo:hover { transform:scale(1.01); box-shadow:0 20px 60px rgba(0,0,0,0.3); }
     .extension-promo-text { color:white; max-width:600px; }
@@ -90,13 +182,13 @@
     .extension-promo-btn:hover { background:var(--accent-hover); transform:translateY(-4px) scale(1.03); box-shadow:0 10px 0 #1a335a; }
     .extension-promo-btn svg { width:24px; height:24px; }
     .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:30px; margin-top:20px; }
-    .feature-item { background:var(--bg-card); padding:36px 24px 30px; border-radius:28px; text-align:center; box-shadow:var(--shadow); border:1px solid var(--border-color); transition:all 0.3s; cursor:default; }
-    .feature-item:hover { transform:translateY(-10px) scale(1.02); box-shadow:var(--shadow-hover); }
+    .feature-item { background:var(--bg-card); padding:36px 24px 30px; border-radius:28px; text-align:center; box-shadow:var(--shadow); border:1px solid var(--border-color); cursor:default; }
     .feature-item .icon-wrap { display:inline-flex; align-items:center; justify-content:center; width:72px; height:72px; border-radius:50%; background:rgba(59,130,246,0.10); color:var(--accent); font-size:32px; margin-bottom:18px; transition:transform 0.3s; }
     .feature-item:hover .icon-wrap { transform:scale(1.1) rotate(5deg); }
     .feature-item .icon-wrap svg { width:36px; height:36px; }
     .feature-item h3 { font-size:20px; margin-bottom:10px; }
     .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
+
     .methods-grid .method-card, .software-grid .software-card, .forum-topic { transition: transform 0.3s, box-shadow 0.3s; }
     .methods-grid .method-card:hover, .software-grid .software-card:hover, .forum-topic:hover { transform:translateY(-6px) scale(1.01); box-shadow:var(--shadow-hover); }
     .page-title { font-size:32px; font-weight:700; margin-bottom:30px; display:flex; align-items:center; gap:12px; }
@@ -179,6 +271,7 @@
     .profile-card .btn { background:var(--header-bg); color:white; border:none; padding:10px 24px; border-radius:40px; font-weight:600; cursor:pointer; transition:0.2s; display:inline-flex; align-items:center; gap:8px; margin:4px; }
     .profile-card .btn:hover { opacity:0.85; transform:scale(1.05); }
     .profile-card .btn-primary { background:var(--accent); }
+
     .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--modal-overlay); backdrop-filter:blur(3px); align-items:center; justify-content:center; z-index:1000; }
     .modal.active { display:flex; }
     .modal-card { background:var(--bg-card); color:var(--text-primary); padding:36px 40px; border-radius:28px; max-width:480px; width:100%; box-shadow:0 20px 40px rgba(0,0,0,0.3); position:relative; animation:fadeInScale 0.3s ease; }
@@ -196,11 +289,14 @@
     .switch-auth span { color:var(--accent); font-weight:600; cursor:pointer; }
     footer { background:var(--footer-bg); color:var(--footer-text); padding:26px 0; text-align:center; margin-top:20px; }
     footer svg { width:16px; height:16px; }
+
     .submission-status { display:inline-block; padding:2px 12px; border-radius:20px; font-size:13px; font-weight:600; }
     .status-pending { background:#f39c12; color:#fff; }
     .status-approved { background:#2ecc71; color:#fff; }
     .status-rejected { background:#e74c3c; color:#fff; }
     .status-reviewed { background:#3498db; color:#fff; }
+
+    /* ===== РАСПИСАНИЕ ===== */
     .schedule-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; background: var(--bg-card); padding: 16px; border-radius: 20px; box-shadow: var(--shadow); }
     .schedule-input { padding: 12px 16px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 15px; min-width: 180px; font-family: inherit; }
     .schedule-input:focus { outline: none; border-color: var(--accent); }
@@ -242,6 +338,8 @@
     .day-analysis-card.best .day-analysis-verdict { background: #d1fae5; color: #065f46; }
     .day-analysis-card.hard .day-analysis-verdict { background: #fee2e2; color: #991b1b; }
     .day-analysis-card.medium .day-analysis-verdict { background: #fef3c7; color: #92400e; }
+
+    /* ===== UPLOAD ===== */
     .upload-box { max-width: 640px; margin: 0 auto; background: var(--bg-card); padding: 32px; border-radius: 28px; box-shadow: var(--shadow); }
     .upload-field { margin-bottom: 16px; }
     .upload-field label { font-weight: 600; display: block; margin-bottom: 6px; }
@@ -261,6 +359,15 @@
     .upload-hint code { background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 4px; }
     .upload-auth-warn { display: none; background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 16px; margin-bottom: 16px; font-weight: 600; }
     .upload-auth-warn.show { display: block; }
+
+    /* ===== ФОРУМ COOLDOWN ===== */
+    .char-counter { font-size: 11px; color: var(--text-light); text-align: right; margin-top: -6px; margin-bottom: 8px; font-family: 'Courier New', monospace; }
+    .char-counter.warn { color: #f39c12; }
+    .char-counter.over { color: #e74c3c; font-weight: 700; }
+    #topicCooldownInfo { display: none; padding: 10px 14px; background: #fee2e2; color: #991b1b; border-radius: 14px; font-size: 13px; font-weight: 600; margin-top: 4px; text-align: center; }
+    #submitTopicBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
     @media (max-width:768px) {
       .header-flex { flex-direction:column; gap:12px; }
       .header-controls { width:100%; justify-content:center; flex-wrap:wrap; }
@@ -382,15 +489,23 @@
 <main>
   <div class="page active" id="page-home">
     <div class="container">
-      <div class="hero">
+      <div class="hero" id="heroEl">
+        <div class="hero-blobs">
+          <div class="blob blob-1"></div>
+          <div class="blob blob-2"></div>
+          <div class="blob blob-3"></div>
+        </div>
+        <div class="hero-grid"></div>
+        <div class="hero-spotlight" id="heroSpotlight"></div>
+        <div class="hero-cursor" id="heroCursor"></div>
         <div class="hero-content">
-          <h1>Защитите себя <br><span>в цифровом мире</span></h1>
+          <h1>Защитите себя <br><span class="tw" id="typewriter">в цифровом мире</span></h1>
           <p>КиберЩит — ваш надёжный помощник в безопасности. Методики, обзоры антивирусов и собственное расширение для браузера.</p>
           <button class="btn-primary" onclick="navigateTo('methods')"><svg><use href="#arrow-right"/></svg> Начать защиту</button>
           <div class="hero-stats">
-            <div><div class="number">12+</div><div class="label">Методик</div></div>
-            <div><div class="number">150+</div><div class="label">Пользователей</div></div>
-            <div><div class="number">4.8</div><div class="label">Рейтинг</div></div>
+            <div><div class="number" data-count="12" data-suffix="+">0</div><div class="label">Методик</div></div>
+            <div><div class="number" data-count="150" data-suffix="+">0</div><div class="label">Пользователей</div></div>
+            <div><div class="number" data-count="4.8" data-suffix="">0</div><div class="label">Рейтинг</div></div>
           </div>
         </div>
       </div>
@@ -469,7 +584,7 @@
         </select>
         <button id="scheduleLoadBtn" class="schedule-btn">📅 Показать</button>
         <button id="scheduleTodayBtn" class="schedule-btn secondary">Сегодня</button>
-        <button id="scheduleUploadBtn" class="schedule-btn secondary" style="margin-left:auto;">📤 Загрузить расписание</button>
+        <button id="scheduleUploadBtn" class="schedule-btn secondary" style="margin-left:auto; display:none;">📤 Загрузить расписание</button>
       </div>
       <div id="scheduleContent"></div>
     </div>
@@ -621,8 +736,11 @@
   <div class="modal-card">
     <span class="modal-close" id="closeNewTopic">&times;</span>
     <h2><svg><use href="#message-circle"/></svg> Новая тема</h2>
-    <input type="text" id="topicTitle" placeholder="Заголовок темы">
-    <textarea id="topicContent" placeholder="Содержание темы..."></textarea>
+    <input type="text" id="topicTitle" placeholder="Заголовок темы" maxlength="120">
+    <div class="char-counter" id="topicTitleCounter">0 / 120</div>
+    <textarea id="topicContent" placeholder="Содержание темы..." maxlength="5000"></textarea>
+    <div class="char-counter" id="topicContentCounter">0 / 5000</div>
+    <div id="topicCooldownInfo"></div>
     <button id="submitTopicBtn">Создать тему</button>
   </div>
 </div>
@@ -657,7 +775,6 @@
     };
 
     function showPage(pageId, params) {
-      // Защита страницы загрузки: только для модераторов
       if (pageId === 'upload' && currentRole !== 'moderator') {
         showToast('Загрузка расписания доступна только модераторам', 'error');
         pageId = 'home';
@@ -775,10 +892,13 @@
         updatedRegisterBtn.onclick = () => openModal(registerModal);
       }
 
-      // Показываем пункт «Загрузить» только модераторам
       const uploadLink = document.getElementById('uploadNavLink');
       if (uploadLink) {
         uploadLink.style.display = (isAuth && currentRole === 'moderator') ? 'inline-flex' : 'none';
+      }
+      const uploadBtn = document.getElementById('scheduleUploadBtn');
+      if (uploadBtn) {
+        uploadBtn.style.display = (isAuth && currentRole === 'moderator') ? '' : 'none';
       }
     }
 
@@ -1054,10 +1174,43 @@
     document.getElementById('closeNewTopic').addEventListener('click', function() {
       document.getElementById('newTopicModal').classList.remove('active');
     });
+
+    // ===== COOLDOWN ДЛЯ ФОРУМА =====
+    let topicCooldownTimer = null;
+    window.startTopicCooldown = function(seconds) {
+      const info = document.getElementById('topicCooldownInfo');
+      const btn = document.getElementById('submitTopicBtn');
+      if (!info || !btn) return;
+      let remaining = Math.max(0, parseInt(seconds, 10) || 0);
+      if (topicCooldownTimer) clearInterval(topicCooldownTimer);
+      btn.disabled = true;
+      info.style.display = 'block';
+
+      function update() {
+        if (remaining <= 0) {
+          clearInterval(topicCooldownTimer);
+          topicCooldownTimer = null;
+          info.style.display = 'none';
+          btn.disabled = false;
+          return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        info.textContent = `⏳ Подожди ещё ${m}:${String(s).padStart(2, '0')} перед созданием новой темы`;
+        remaining--;
+      }
+      update();
+      topicCooldownTimer = setInterval(update, 1000);
+    };
+
     document.getElementById('submitTopicBtn').addEventListener('click', async function() {
       const title = document.getElementById('topicTitle').value.trim();
       const content = document.getElementById('topicContent').value.trim();
       if (!title || !content) { showToast('Заполните все поля', 'error'); return; }
+      if (title.length < 3) { showToast('Заголовок минимум 3 символа', 'error'); return; }
+      if (title.length > 120) { showToast('Заголовок максимум 120 символов', 'error'); return; }
+      if (content.length < 10) { showToast('Содержание минимум 10 символов', 'error'); return; }
+      if (content.length > 5000) { showToast('Содержание максимум 5000 символов', 'error'); return; }
       try {
         const res = await fetch('/api/topics', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title, content }) });
         const data = await res.json();
@@ -1065,12 +1218,35 @@
           document.getElementById('newTopicModal').classList.remove('active');
           document.getElementById('topicTitle').value = '';
           document.getElementById('topicContent').value = '';
+          document.getElementById('topicTitleCounter').textContent = '0 / 120';
+          document.getElementById('topicContentCounter').textContent = '0 / 5000';
           showToast('Тема создана!', 'success');
           loadTopics();
           showPage('forum');
-        } else showToast(data.error, 'error');
+        } else {
+          showToast(data.error || 'Ошибка', 'error');
+          if (data.waitSeconds) window.startTopicCooldown(data.waitSeconds);
+        }
       } catch(e) { showToast('Ошибка', 'error'); }
     });
+
+    // Счётчики символов в модалке темы
+    (function initTopicCounters() {
+      const titleEl = document.getElementById('topicTitle');
+      const contentEl = document.getElementById('topicContent');
+      const titleCounter = document.getElementById('topicTitleCounter');
+      const contentCounter = document.getElementById('topicContentCounter');
+      if (!titleEl || !contentEl) return;
+
+      function updateCounter(el, counter, max) {
+        const len = el.value.length;
+        counter.textContent = `${len} / ${max}`;
+        counter.className = 'char-counter' + (len > max * 0.9 ? (len > max ? ' over' : ' warn') : '');
+      }
+
+      titleEl.addEventListener('input', () => updateCounter(titleEl, titleCounter, 120));
+      contentEl.addEventListener('input', () => updateCounter(contentEl, contentCounter, 5000));
+    })();
 
     function loadProfile() {
       const container = document.getElementById('profileContent');
@@ -1283,7 +1459,6 @@
         groups.map(g => `<option value="${g}">${g}</option>`).join('');
     }
 
-    // ===== ФИЛЬТР ПОДГРУПП =====
     function filterPairsBySubgroup(pairs, subgroup) {
       if (!subgroup || subgroup === 'all') return pairs;
       const marker = subgroup + 'пг';
@@ -1295,7 +1470,6 @@
       });
     }
 
-    // ===== РАСПИСАНИЕ =====
     let scheduleGroupsLoaded = false;
     let lastScheduleData = null;
 
@@ -1320,11 +1494,8 @@
         loadSchedule();
       };
       document.getElementById('scheduleUploadBtn').onclick = () => {
-              const uploadBtn = document.getElementById('scheduleUploadBtn');
-      if (uploadBtn) uploadBtn.style.display = currentRole === 'moderator' ? '' : 'none';
-        if (!currentUser) {
-          showToast('Войдите, чтобы загрузить расписание', 'error');
-          document.getElementById('loginBtn').click();
+        if (!currentUser || currentRole !== 'moderator') {
+          showToast('Загрузка доступна только модераторам', 'error');
           return;
         }
         showPage('upload');
@@ -1371,7 +1542,7 @@
       }
     }
 
-        function renderSchedule(data) {
+    function renderSchedule(data) {
       const container = document.getElementById('scheduleContent');
       const subgroupEl = document.getElementById('scheduleSubgroup');
       const subgroup = subgroupEl ? subgroupEl.value : 'all';
@@ -1407,10 +1578,8 @@
         return;
       }
 
-      // Уникальные слоты времени среди ВСЕХ пар группы (для правильной нумерации)
       const allTimes = [...new Set(allPairs.map(p => p.start_time))].sort();
 
-      // Группируем отфильтрованные пары по времени старта
       const grouped = new Map();
       for (const p of pairs) {
         if (!grouped.has(p.start_time)) grouped.set(p.start_time, []);
@@ -1427,8 +1596,6 @@
         const startTime = firstPair.start_time || '—';
         const endTime = firstPair.end_time || '—';
 
-        // Если на слоте одна пара — рендерим как раньше.
-        // Если несколько (для разных подгрупп) — рисуем несколько строк внутри карточки.
         const innerHtml = slotPairs.map((p, idx) => {
           let badge = '';
           const subj = String(p.subject || '');
@@ -1467,7 +1634,6 @@
       `;
     }
 
-    // ===== ЗАГРУЗКА XLSX =====
     async function initUploadPage() {
       const warn = document.getElementById('uploadAuthWarn');
       if (!currentUser) {
@@ -1561,7 +1727,6 @@
       }
     });
 
-    // ===== АНАЛИЗ =====
     let analysisGroupsLoaded = false;
     let lastAnalysisData = null;
 
@@ -1646,7 +1811,6 @@
       return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
-    // ===== МОДАЛКИ =====
     const loginModal = document.getElementById('loginModal');
     const registerModal = document.getElementById('registerModal');
     const closeLogin = document.getElementById('closeLogin');
@@ -1705,6 +1869,80 @@
         } else showToast(data.error || 'Ошибка входа', 'error');
       } catch(e) { showToast('Ошибка сервера', 'error'); }
     });
+
+    // ===== КРАСИВЫЕ ЭФФЕКТЫ НА ГЛАВНОЙ =====
+    (function initHeroFx() {
+      const hero = document.getElementById('heroEl');
+      if (!hero) return;
+      const spotlight = document.getElementById('heroSpotlight');
+      const cursor = document.getElementById('heroCursor');
+      const content = hero.querySelector('.hero-content');
+
+      hero.addEventListener('mousemove', (e) => {
+        const r = hero.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        if (spotlight) {
+          spotlight.style.setProperty('--mx', (x / r.width * 100) + '%');
+          spotlight.style.setProperty('--my', (y / r.height * 100) + '%');
+        }
+        if (cursor) {
+          cursor.style.left = x + 'px';
+          cursor.style.top = y + 'px';
+        }
+        if (content) {
+          const dx = (x - r.width / 2) / r.width;
+          const dy = (y - r.height / 2) / r.height;
+          content.style.transform = `translate3d(${dx * 10}px, ${dy * 6}px, 0)`;
+        }
+      });
+
+      hero.addEventListener('mouseleave', () => {
+        if (content) content.style.transform = '';
+      });
+
+      setTimeout(() => {
+        const tw = document.getElementById('typewriter');
+        if (tw) tw.classList.add('done');
+      }, 2600);
+
+      const numbers = document.querySelectorAll('.hero-stats .number');
+      const numObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          const target = parseFloat(el.dataset.count) || 0;
+          const suffix = el.dataset.suffix || '';
+          const isFloat = String(target).includes('.');
+          const dur = 1600;
+          const t0 = performance.now();
+          (function tick(now) {
+            const p = Math.min((now - t0) / dur, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            const v = target * eased;
+            el.textContent = (isFloat ? v.toFixed(1) : Math.round(v)) + suffix;
+            if (p < 1) requestAnimationFrame(tick);
+          })(t0);
+          numObserver.unobserve(el);
+        });
+      }, { threshold: 0.4 });
+      numbers.forEach(n => numObserver.observe(n));
+    })();
+
+    // ===== ПОЯВЛЕНИЕ ПРИ СКРОЛЛЕ =====
+    (function initReveal() {
+      const els = document.querySelectorAll('.feature-item, .method-card, .extension-promo');
+      els.forEach(el => el.classList.add('reveal'));
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(el => obs.observe(el));
+    })();
 
     // ===== ИНИЦИАЛИЗАЦИЯ =====
     (async () => {

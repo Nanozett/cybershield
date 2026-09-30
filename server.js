@@ -351,14 +351,59 @@ app.get('/api/topics', async (req, res) => {
   } catch { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
+// ===== ОГРАНИЧЕНИЯ ФОРУМА =====
+const TOPIC_TITLE_MAX = 120;
+const TOPIC_CONTENT_MAX = 5000;
+const TOPIC_COOLDOWN_MS = 5 * 60 * 1000; // 5 минут
+
+function parseDbDate(s) {
+  if (!s) return 0;
+  const str = String(s);
+  const iso = str.includes('T') ? str : str.replace(' ', 'T') + 'Z';
+  const t = new Date(iso).getTime();
+  return isNaN(t) ? 0 : t;
+}
+
 app.post('/api/topics', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Требуется авторизация' });
   const { title, content } = req.body;
   if (!title || !content) return res.status(400).json({ error: 'Заполните все поля' });
+
+  const trimmedTitle = String(title).trim();
+  const trimmedContent = String(content).trim();
+
+  if (trimmedTitle.length < 3) return res.status(400).json({ error: 'Заголовок минимум 3 символа' });
+  if (trimmedTitle.length > TOPIC_TITLE_MAX) return res.status(400).json({ error: `Заголовок максимум ${TOPIC_TITLE_MAX} символов` });
+  if (trimmedContent.length < 10) return res.status(400).json({ error: 'Содержание минимум 10 символов' });
+  if (trimmedContent.length > TOPIC_CONTENT_MAX) return res.status(400).json({ error: `Содержание максимум ${TOPIC_CONTENT_MAX} символов` });
+
   try {
-    const r = await dbRun('INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)', [req.session.userId, title, content]);
+    // Антиспам: 5 минут между созданием тем
+    const last = await dbGet(
+      'SELECT created_at FROM topics WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+      [req.session.userId]
+    );
+    if (last && last.created_at) {
+      const lastTime = parseDbDate(last.created_at);
+      if (lastTime > 0) {
+        const diff = Date.now() - lastTime;
+        if (diff < TOPIC_COOLDOWN_MS) {
+          const waitSec = Math.ceil((TOPIC_COOLDOWN_MS - diff) / 1000);
+          return res.status(429).json({
+            error: `Подожди ещё ${Math.ceil(waitSec/60)} мин. перед созданием новой темы`,
+            waitSeconds: waitSec
+          });
+        }
+      }
+    }
+
+    const r = await dbRun('INSERT INTO topics (user_id, title, content) VALUES (?, ?, ?)',
+      [req.session.userId, trimmedTitle, trimmedContent]);
     res.json({ success: true, topicId: r.lastID });
-  } catch { res.status(500).json({ error: 'Ошибка сервера' }); }
+  } catch (e) {
+    console.error('topic create error:', e);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 app.get('/api/topics/:id', async (req, res) => {
