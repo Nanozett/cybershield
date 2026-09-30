@@ -177,7 +177,9 @@
       height: 100%;
       width: 100%;
     }
-    .attack-map-canvas .leaflet-tile-pane { filter: brightness(1.05) saturate(1.2); }
+    .attack-map-canvas .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1) saturate(0.6);
+}
     .attack-map-canvas .leaflet-control-attribution { display: none !important; }
     .attack-map-canvas .leaflet-control-zoom { display: none !important; }
     /* Стили для кастомных подписей-маркеров */
@@ -2424,13 +2426,13 @@
         maxZoom: 5
       });
 
-      // Тёмные тайлы CartoDB без подписей
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        subdomains: 'abc',
         maxZoom: 19,
-        noWrap: true
+        noWrap: true,
+        crossOrigin: true
       }).addTo(map);
-
+      
       // Показываем весь мир
       map.fitBounds([[-60, -180], [75, 180]], { padding: [0, 0] });
 
