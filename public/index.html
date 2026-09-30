@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>КиберЩит — безопасность в интернете</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --bg-page: #f4f7fc; --bg-card: #ffffff; --text-primary: #1e293b; --text-secondary: #475569;
@@ -155,7 +157,7 @@
     .feature-item h3 { font-size:20px; margin-bottom:10px; }
     .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
 
-    /* ============ КАРТА КИБЕРАТАК ============ */
+    /* ============ КАРТА КИБЕРАТАК (LEAFLET) ============ */
     .attack-map-section { margin: 40px 0 30px; background: linear-gradient(135deg, #0a1424, #0b1a2e); border-radius: 30px; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); color: white; animation: fadeInScale 1s ease; }
     .attack-map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .attack-map-header h2 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
@@ -165,40 +167,33 @@
       position: relative;
       border-radius: 20px;
       overflow: hidden;
-      background:
-        radial-gradient(circle at 30% 40%, rgba(59,130,246,0.12), transparent 55%),
-        radial-gradient(circle at 70% 60%, rgba(139,92,246,0.10), transparent 55%),
-        #060d17;
+      background: #060d17;
       min-height: 380px;
     }
-    /* Слой 1: Карта мира (SVG с Wikimedia) */
-    .attack-map-canvas::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg') center/contain no-repeat;
-      opacity: 0.28;
-      filter: invert(1) brightness(1.3) saturate(1.5) hue-rotate(190deg);
-      pointer-events: none;
-      z-index: 1;
+    /* Оформление Leaflet: убираем светлые части, оставляем тёмную тему */
+    .attack-map-canvas .leaflet-container {
+      background: #060d17 !important;
+      font-family: inherit;
+      height: 100%;
+      width: 100%;
     }
-    /* Слой 2: Техническая сетка поверх карты */
-    .attack-map-canvas::after {
-      content: '';
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(59,130,246,0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.07) 1px, transparent 1px);
-      background-size: 34px 34px;
+    .attack-map-canvas .leaflet-tile-pane { filter: brightness(1.05) saturate(1.2); }
+    .attack-map-canvas .leaflet-control-attribution { display: none !important; }
+    .attack-map-canvas .leaflet-control-zoom { display: none !important; }
+    /* Стили для кастомных подписей-маркеров */
+    .leaflet-attack-marker { background: transparent !important; border: none !important; }
+    .leaflet-attack-label {
+      color: #ef4444;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      text-shadow: 0 0 8px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.9);
       pointer-events: none;
-      z-index: 2;
-      mix-blend-mode: screen;
+      display: inline-block;
+      transform: translate(-50%, 0);
     }
-    /* Точки и подписи — поверх карты и сетки */
-    .attack-dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 10px #ef4444, 0 0 24px rgba(239,68,68,0.7); transform: translate(-50%, -50%); animation: attackDot 3s ease-out forwards; pointer-events: none; z-index: 4; }
-    .attack-dot::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid #ef4444; animation: attackRing 3s ease-out forwards; }
-    @keyframes attackDot { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } }
-    @keyframes attackRing { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(2.8); opacity: 0; } }
-    .attack-dot-label { position: absolute; color: #ef4444; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transform: translate(-50%, -22px); white-space: nowrap; text-shadow: 0 0 8px rgba(0,0,0,0.9); pointer-events: none; animation: attackDot 3s ease-out forwards; z-index: 5; }
     .attack-feed { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; max-height: 380px; }
     .attack-feed h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 14px; }
     .attack-feed-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
@@ -2403,38 +2398,60 @@
       }, 900);
     })();
 
-    // ===== КАРТА АТАК =====
+    // ===== КАРТА АТАК (Leaflet + CartoDB Dark Matter) =====
     (function initAttackMap() {
-      const canvas = document.getElementById('attackMapCanvas');
+      const mapEl = document.getElementById('attackMapCanvas');
       const feedList = document.getElementById('attackFeedList');
-      if (!canvas || !feedList) return;
+      if (!mapEl || !feedList) return;
 
-      const CITIES = [
-        { name: 'Москва', x: 60.4, y: 19.0 },
-        { name: 'Санкт-Петербург', x: 58.4, y: 16.7 },
-        { name: 'Новосибирск', x: 73.0, y: 19.4 },
-        { name: 'Екатеринбург', x: 66.8, y: 18.4 },
-        { name: 'Лондон', x: 50.0, y: 21.4 },
-        { name: 'Париж', x: 50.7, y: 22.9 },
-        { name: 'Берлин', x: 53.7, y: 20.8 },
-        { name: 'Нью-Йорк', x: 29.4, y: 27.4 },
-        { name: 'Токио', x: 88.8, y: 30.2 },
-        { name: 'Пекин', x: 82.3, y: 27.8 },
-        { name: 'Сеул', x: 85.3, y: 29.1 },
-        { name: 'Дубай', x: 65.4, y: 36.0 },
-        { name: 'Сан-Паулу', x: 37.0, y: 63.1 },
-        { name: 'Сидней', x: 92.0, y: 68.8 }
-      ];
-      
-            // Пересчёт реальных координат в проценты на карте
-      // Пример: geoToXY(55.75, 37.61) → { x: 60.4, y: 19.0 } (Москва)
-      function geoToXY(lat, lon) {
-        return {
-          x: (lon + 180) / 360 * 100,
-          y: (90 - lat) / 180 * 100
-        };
+      if (typeof L === 'undefined') {
+        console.warn('Leaflet не загрузился — карта не будет показана');
+        return;
       }
-      
+
+      // Инициализация карты — статичная, без зума и перетаскивания
+      const map = L.map(mapEl, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false,
+        touchZoom: false,
+        minZoom: 0,
+        maxZoom: 5
+      });
+
+      // Тёмные тайлы CartoDB без подписей
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        noWrap: true
+      }).addTo(map);
+
+      // Показываем весь мир
+      map.fitBounds([[-60, -180], [75, 180]], { padding: [0, 0] });
+
+      // Реальные координаты городов (lat, lon)
+      const CITIES = [
+        { name: 'Москва',          lat: 55.7558, lon: 37.6173 },
+        { name: 'Санкт-Петербург', lat: 59.9311, lon: 30.3609 },
+        { name: 'Новосибирск',     lat: 55.0084, lon: 82.9357 },
+        { name: 'Екатеринбург',    lat: 56.8389, lon: 60.6057 },
+        { name: 'Лондон',          lat: 51.5074, lon: -0.1278 },
+        { name: 'Париж',           lat: 48.8566, lon: 2.3522  },
+        { name: 'Берлин',          lat: 52.5200, lon: 13.4050 },
+        { name: 'Нью-Йорк',        lat: 40.7128, lon: -74.0060 },
+        { name: 'Токио',           lat: 35.6762, lon: 139.6503 },
+        { name: 'Пекин',           lat: 39.9042, lon: 116.4074 },
+        { name: 'Сеул',            lat: 37.5665, lon: 126.9780 },
+        { name: 'Дубай',           lat: 25.2048, lon: 55.2708 },
+        { name: 'Сан-Паулу',       lat: -23.5505, lon: -46.6333 },
+        { name: 'Сидней',          lat: -33.8688, lon: 151.2093 }
+      ];
+
       const DOMAINS = [
         'sberbank-online-vhod.ru', 'steamcommunlty.com', 'free-vbucks-generator.top',
         'casebatle.id', 'gosuslugi-vhod.com', 'paypal-secure-login.com',
@@ -2449,24 +2466,56 @@
       function spawnAttack() {
         const city = pick(CITIES);
         const domain = pick(DOMAINS);
-        const x = city.x + (Math.random() - 0.5) * 6;
-        const y = city.y + (Math.random() - 0.5) * 6;
 
-        const dot = document.createElement('div');
-        dot.className = 'attack-dot';
-        dot.style.left = x + '%';
-        dot.style.top = y + '%';
-        canvas.appendChild(dot);
+        // Красная точка
+        const marker = L.circleMarker([city.lat, city.lon], {
+          radius: 5,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 1,
+          weight: 2,
+          interactive: false
+        }).addTo(map);
 
-        const label = document.createElement('div');
-        label.className = 'attack-dot-label';
-        label.style.left = x + '%';
-        label.style.top = y + '%';
-        label.textContent = city.name;
-        canvas.appendChild(label);
+        // Пульсирующее кольцо
+        const pulse = L.circleMarker([city.lat, city.lon], {
+          radius: 6,
+          color: '#ef4444',
+          fillColor: 'transparent',
+          weight: 2,
+          opacity: 1,
+          interactive: false
+        }).addTo(map);
 
-        setTimeout(() => { dot.remove(); label.remove(); }, 3000);
+        let r = 6;
+        const interval = setInterval(() => {
+          r += 1.5;
+          pulse.setRadius(r);
+          pulse.setStyle({ opacity: Math.max(0, 1 - (r - 6) / 30) });
+          if (r > 36) {
+            clearInterval(interval);
+            map.removeLayer(pulse);
+          }
+        }, 50);
 
+        // Подпись города
+        const label = L.marker([city.lat, city.lon], {
+          icon: L.divIcon({
+            className: 'leaflet-attack-marker',
+            html: `<div class="leaflet-attack-label">${city.name}</div>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0]
+          }),
+          interactive: false
+        }).addTo(map);
+
+        // Удаление через 3 секунды
+        setTimeout(() => {
+          map.removeLayer(marker);
+          map.removeLayer(label);
+        }, 3000);
+
+        // Лента событий
         const item = document.createElement('div');
         item.className = 'attack-feed-item';
         item.innerHTML = `
@@ -2479,10 +2528,16 @@
         }
       }
 
+      // Стартовые точки
       for (let i = 0; i < 4; i++) setTimeout(spawnAttack, i * 200);
 
+      // Регулярный спавн
       const timer = setInterval(() => {
-        if (!document.body.contains(canvas)) { clearInterval(timer); return; }
+        if (!document.body.contains(mapEl)) {
+          clearInterval(timer);
+          map.remove();
+          return;
+        }
         spawnAttack();
       }, 2400);
     })();
