@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>КиберЩит — безопасность в интернете</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -157,22 +158,22 @@
     .feature-item h3 { font-size:20px; margin-bottom:10px; }
     .feature-item p { color:var(--text-secondary); font-size:15px; line-height:1.5; }
 
-    /* ============ КАРТА КИБЕРАТАК (LEAFLET + CARTODB DARK MATTER) ============ */
+    /* ============ КАРТА КИБЕРАТАК (LEAFLET + OSM + CUSTOM FILTER) ============ */
     .attack-map-section { margin: 40px 0 30px; background: linear-gradient(135deg, #060f1d, #0a1a30 50%, #0d1b35); border-radius: 30px; padding: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(59,130,246,0.15); color: white; animation: fadeInScale 1s ease; }
     .attack-map-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .attack-map-header h2 { font-size: 24px; display: flex; align-items: center; gap: 10px; background: linear-gradient(90deg, #ffffff, #7eb3ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .attack-map-header h2 svg { color: var(--accent); width: 28px; height: 28px; -webkit-text-fill-color: initial; }
-    .attack-map-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+    .attack-map-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
     .attack-map-canvas {
       position: relative;
       border-radius: 20px;
       overflow: hidden;
       background: #05080f;
-      min-height: 420px;
+      min-height: 520px;
       box-shadow:
-        inset 0 0 100px rgba(59,130,246,0.15),
-        inset 0 0 0 1px rgba(59,130,246,0.18),
-        0 0 40px rgba(59,130,246,0.08);
+        inset 0 0 120px rgba(59,130,246,0.18),
+        inset 0 0 0 1px rgba(59,130,246,0.22),
+        0 0 60px rgba(59,130,246,0.10);
     }
     /* Цветной оверлей — придаёт карте «кибер» оттенок */
     .attack-map-canvas::before {
@@ -182,12 +183,12 @@
       border-radius: 20px;
       z-index: 450;
       background:
-        radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.10), transparent 55%),
-        radial-gradient(ellipse at 75% 80%, rgba(139,92,246,0.10), transparent 55%),
-        linear-gradient(180deg, rgba(6,16,32,0.35) 0%, transparent 30%, transparent 70%, rgba(6,16,32,0.45) 100%);
+        radial-gradient(ellipse at 25% 15%, rgba(59,130,246,0.14), transparent 50%),
+        radial-gradient(ellipse at 80% 85%, rgba(139,92,246,0.14), transparent 50%),
+        linear-gradient(180deg, rgba(6,16,32,0.45) 0%, transparent 25%, transparent 75%, rgba(6,16,32,0.55) 100%);
       mix-blend-mode: screen;
     }
-    /* Виньетка */
+    /* Виньетка + сине-фиолетовый оттенок */
     .attack-map-canvas::after {
       content: '';
       position: absolute; inset: 0;
@@ -195,7 +196,7 @@
       border-radius: 20px;
       z-index: 500;
       background:
-        radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(3,7,15,0.65) 100%);
+        radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(3,7,20,0.75) 100%);
     }
     .attack-map-canvas .leaflet-container {
       background: #05080f !important;
@@ -203,55 +204,53 @@
       height: 100%;
       width: 100%;
     }
-    /* CartoDB Dark Matter — уже тёмно-синяя, усилим насыщенность */
+    /* Превращаем светлый OSM в тёмную сине-фиолетовую карту */
     .attack-map-canvas .leaflet-tile-pane {
-      filter: brightness(1.15) saturate(1.8) contrast(1.08) hue-rotate(-8deg);
+      filter: invert(1) hue-rotate(200deg) saturate(1.6) brightness(0.9) contrast(1.15);
     }
-    /* Инвертируем светлые тайлы OSM, чтобы получить тёмную карту */
-.attack-map-canvas .leaflet-tile-pane {
-  filter: invert(1) grayscale(1) brightness(0.85) contrast(1.2);
-}
     .attack-map-canvas .leaflet-control-attribution,
     .attack-map-canvas .leaflet-control-zoom { display: none !important; }
 
     /* Точки городов и подписи */
     .leaflet-attack-marker { background: transparent !important; border: none !important; }
     .leaflet-attack-label {
-      color: #cfe4ff;
+      color: #e5f1ff;
       font-size: 10px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
       white-space: nowrap;
       pointer-events: none;
       display: inline-block;
-      transform: translate(-50%, 0);
-      padding: 3px 9px;
-      background: linear-gradient(135deg, rgba(10,20,40,0.9), rgba(20,35,65,0.9));
-      border: 1px solid rgba(59,130,246,0.55);
+      transform: translate(-50%, -50%);
+      padding: 4px 10px;
+      background: linear-gradient(135deg, rgba(10,22,45,0.95), rgba(25,45,80,0.95));
+      border: 1px solid rgba(96,165,250,0.7);
       border-radius: 6px;
       box-shadow:
-        0 0 12px rgba(59,130,246,0.55),
-        inset 0 0 10px rgba(59,130,246,0.12);
-      backdrop-filter: blur(4px);
+        0 0 14px rgba(59,130,246,0.75),
+        0 0 30px rgba(59,130,246,0.35),
+        inset 0 0 12px rgba(96,165,250,0.18);
+      backdrop-filter: blur(6px);
+      text-shadow: 0 0 8px rgba(96,165,250,0.8);
     }
 
     /* Анимированные дуги атак (SVG-пути Leaflet) */
     .leaflet-overlay-pane svg path.attack-arc-path {
-      filter: drop-shadow(0 0 6px #3b82f6) drop-shadow(0 0 14px rgba(59,130,246,0.7));
+      filter: drop-shadow(0 0 8px #3b82f6) drop-shadow(0 0 18px rgba(59,130,246,0.85));
     }
 
-    .attack-feed { background: linear-gradient(180deg, rgba(59,130,246,0.05), rgba(139,92,246,0.03)); border: 1px solid rgba(59,130,246,0.18); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; max-height: 420px; box-shadow: inset 0 0 30px rgba(59,130,246,0.06); }
+    .attack-feed { background: linear-gradient(180deg, rgba(59,130,246,0.06), rgba(139,92,246,0.04)); border: 1px solid rgba(59,130,246,0.22); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; max-height: 520px; box-shadow: inset 0 0 30px rgba(59,130,246,0.08); }
     .attack-feed h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: #9ab6dd; font-weight: 800; margin-bottom: 14px; }
     .attack-feed-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
     .attack-feed-list::-webkit-scrollbar { width: 6px; }
-    .attack-feed-list::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.35); border-radius: 3px; }
-    .attack-feed-item { background: linear-gradient(135deg, rgba(239,68,68,0.14), rgba(239,68,68,0.04)); border-left: 3px solid #ef4444; padding: 9px 11px; border-radius: 8px; font-size: 12px; animation: attackFeedIn 0.5s ease; line-height: 1.4; box-shadow: 0 0 12px rgba(239,68,68,0.12); }
-    .attack-feed-item.blocked { border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(245,158,11,0.04)); }
-    .attack-feed-domain { color: #ff7b7b; font-family: 'Courier New', monospace; font-weight: 700; word-break: break-all; text-shadow: 0 0 8px rgba(239,68,68,0.5); }
-    .attack-feed-item.blocked .attack-feed-domain { color: #fbbf24; text-shadow: 0 0 8px rgba(245,158,11,0.5); }
+    .attack-feed-list::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 3px; }
+    .attack-feed-item { background: linear-gradient(135deg, rgba(239,68,68,0.16), rgba(239,68,68,0.04)); border-left: 3px solid #ef4444; padding: 9px 11px; border-radius: 8px; font-size: 12px; animation: attackFeedIn 0.5s ease; line-height: 1.4; box-shadow: 0 0 14px rgba(239,68,68,0.15); }
+    .attack-feed-item.blocked { border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,0.16), rgba(245,158,11,0.04)); }
+    .attack-feed-domain { color: #ff8585; font-family: 'Courier New', monospace; font-weight: 700; word-break: break-all; text-shadow: 0 0 10px rgba(239,68,68,0.6); }
+    .attack-feed-item.blocked .attack-feed-domain { color: #fbbf24; text-shadow: 0 0 10px rgba(245,158,11,0.6); }
     .attack-feed-meta { color: #8ba7c9; font-size: 11px; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
-    .attack-feed-arrow { color: #3b82f6; font-weight: 800; }
+    .attack-feed-arrow { color: #60a5fa; font-weight: 800; text-shadow: 0 0 8px rgba(96,165,250,0.8); }
     @keyframes attackFeedIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
 
     /* ============ AI ЧАТ ============ */
@@ -584,6 +583,7 @@
       .scanner-box { padding: 20px; }
       .quiz-card { padding: 20px; }
       .attack-map-grid { grid-template-columns: 1fr; }
+      .attack-map-canvas { min-height: 380px; }
       .ai-chat-panel { right: 16px; bottom: 88px; }
       .ai-chat-btn { bottom: 16px; right: 16px; }
       .hero-shield-wrap { width: 340px; height: 340px; opacity: 0.25; }
@@ -2448,41 +2448,41 @@
       }, 900);
     })();
 
-// ===== КАРТА АТАК (Leaflet + OSM + CSS-фильтр для тёмной темы) =====
-(function initAttackMap() {
-  const mapEl = document.getElementById('attackMapCanvas');
-  const feedList = document.getElementById('attackFeedList');
-  if (!mapEl || !feedList) return;
+    // ===== КАРТА АТАК (Leaflet + OSM + сине-фиолетовый фильтр) =====
+    (function initAttackMap() {
+      const mapEl = document.getElementById('attackMapCanvas');
+      const feedList = document.getElementById('attackFeedList');
+      if (!mapEl || !feedList) return;
 
-  if (typeof L === 'undefined') {
-    console.warn('Leaflet не загрузился — карта не будет показана');
-    return;
-  }
+      if (typeof L === 'undefined') {
+        console.warn('Leaflet не загрузился — карта не будет показана');
+        return;
+      }
 
-  const map = L.map(mapEl, {
-    zoomControl: false,
-    attributionControl: false,
-    dragging: false,
-    scrollWheelZoom: false,
-    doubleClickZoom: false,
-    boxZoom: false,
-    keyboard: false,
-    tap: false,
-    touchZoom: false,
-    minZoom: 0,
-    maxZoom: 5
-  });
+      const map = L.map(mapEl, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false,
+        touchZoom: false,
+        minZoom: 1,
+        maxZoom: 6
+      });
 
-  // OpenStreetMap — бесплатно, без ключа, без CORS-блокировок
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    noWrap: true,
-    crossOrigin: true
-  }).addTo(map);
+      // OpenStreetMap — бесплатно, без ключа, без CORS-проблем
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        noWrap: false,
+        crossOrigin: true
+      }).addTo(map);
 
-  map.fitBounds([[-55, -175], [72, 175]], { padding: [10, 10] });
-
-
+      // Ключевое: показываем карту в правильном зуме, чтобы она заполняла контейнер
+      // (широта 25, долгота 10 — центр примерно между Европой и Азией)
+      map.setView([25, 10], 2, { animate: false });
 
       const CITIES = [
         { name: 'Москва',          lat: 55.7558, lon: 37.6173 },
@@ -2512,8 +2512,6 @@
       const MAX_FEED = 8;
       function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-      // Строим квадратичную кривую Безье в пиксельных координатах,
-      // возвращаем массив LatLng для polyline
       function createArc(fromLatLng, toLatLng) {
         const p1 = map.latLngToLayerPoint(fromLatLng);
         const p2 = map.latLngToLayerPoint(toLatLng);
@@ -2540,7 +2538,6 @@
         return pts;
       }
 
-      // Плавная пульсация через requestAnimationFrame
       function pulseMarker(lat, lon, color, maxR, duration) {
         const m = L.circleMarker([lat, lon], {
           radius: 3,
@@ -2575,7 +2572,7 @@
         const arcPoints = createArc([from.lat, from.lon], [to.lat, to.lon]);
         if (arcPoints.length) {
           const arc = L.polyline(arcPoints, {
-            color: '#3b82f6',
+            color: '#60a5fa',
             weight: 2,
             opacity: 0.95,
             interactive: false,
@@ -2590,12 +2587,10 @@
               pathEl.style.strokeDasharray = len;
               pathEl.style.strokeDashoffset = len;
               if (pathEl.animate) {
-                // Рисуем линию
                 pathEl.animate(
                   [{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
                   { duration: 1300, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }
                 );
-                // Затемнение
                 setTimeout(() => {
                   pathEl.animate(
                     [{ opacity: 0.95 }, { opacity: 0 }],
